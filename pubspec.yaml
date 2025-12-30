@@ -1,0 +1,91 @@
+name: social_media_app
+description: "A new Flutter project."
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  image_picker: ^1.0.4
+  image_cropper: ^11.0.0
+  video_player: ^2.8.5
+  chewie: ^1.5.0
+
+  flutter_localizations:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.2
+  firebase_core: ^4.2.1
+  cloud_firestore: ^6.1.0
+  firebase_storage: ^13.0.4
+  firebase_auth: ^6.1.2
+  google_sign_in: ^7.2.0
+  firebase_database: ^12.1.0
+  file_picker: ^10.3.7
+  fluttertoast: ^9.0.0
+  flutter_svg: ^2.0.0
+
+  intl:
+  shared_preferences:
+  decimal:
+  flutter_logs: ^2.1.11
+  loading_animation_widget: ^1.2.1
+  path_provider: ^2.0.11
+  video_compress: ^3.1.3
+  timeago: ^3.7.0
+
+
+  json_annotation: any
+  webview_flutter_android: any
+  webview_flutter_wkwebview: any
+  path: any
+  http: any
+  multi_select_flutter: ^4.0.0
+  firebase_ui_firestore: ^2.0.1
+  uuid: ^4.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/images/
+    - assets/images/app_icon/
+    - assets/images/captcha/
+    - assets/images/page/
+    - assets/images/page/home_page/
+
+# -------------------------
+# Launcher Icon Konfiguration
+# -------------------------
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon/app_icon.jpg"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+# -------------------------
+# Splashscreen Konfiguration
+# -------------------------
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/images/app_icon/app_icon.jpg
+  android: true
+  ios: true
+  web: false
