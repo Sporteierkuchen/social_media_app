@@ -46,7 +46,7 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
       padding: const EdgeInsets.only(left: 10, right: 10, top: 40, bottom: 20),
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage("assets/images/page/egon3.jpg"),
+          image: AssetImage("assets/images/page/background.png"),
           fit: BoxFit.cover,
         ),
       ),

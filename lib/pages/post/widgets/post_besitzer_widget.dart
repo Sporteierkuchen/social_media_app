@@ -127,6 +127,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 15),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, // ✅ wichtig
                           children: [
                             Row(
                               children: [
@@ -135,7 +136,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                                     "$displayVorname $displayNachname",
                                     style: const TextStyle(
                                       fontSize: 18,
-                                      height: 0,
+                                      height: 1.1,
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -143,86 +144,54 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                                     softWrap: true,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 20, left: 3),
-                                  child: HelperUtil.getUserIcon(displayRole),
-                                ),
+                                const SizedBox(width: 8),
+                                HelperUtil.getUserIcon(displayRole),
                               ],
                             ),
 
                             const SizedBox(height: 6),
 
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // VideoCount live
-                                StreamBuilder<int>(
-                                  stream: widget.ownerVideoCountStream,
-                                  builder: (context, vSnap) {
-                                    final count = vSnap.data ?? 0;
-                                    return Text(
-                                      count == 1 ? "$count Video" : "$count Videos",
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        height: 0,
-                                        color: Colors.grey,
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    "|",
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      height: 0,
-                                      color: Colors.grey,
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    StreamBuilder<int>(
+                                      stream: widget.ownerVideoCountStream,
+                                      builder: (context, vSnap) {
+                                        final c = vSnap.data ?? 0;
+                                        return Text(
+                                          c == 1 ? "$c Video" : "$c Videos",
+                                          style: const TextStyle(fontSize: 15, height: 1.1, color: Colors.grey),
+                                        );
+                                      },
                                     ),
-                                  ),
-                                ),
-
-                                // ✅ ImageCount live
-                                StreamBuilder<int>(
-                                  stream: widget.ownerImageCountStream,
-                                  builder: (context, iSnap) {
-                                    final count = iSnap.data ?? 0;
-                                    return Text(
-                                      count == 1 ? "$count Bild" : "$count Bilder",
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        height: 0,
-                                        color: Colors.grey,
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    "|",
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      height: 0,
-                                      color: Colors.grey,
+                                    const Text("|", style: TextStyle(fontSize: 15, height: 1.1, color: Colors.grey)),
+                                    StreamBuilder<int>(
+                                      stream: widget.ownerImageCountStream,
+                                      builder: (context, iSnap) {
+                                        final c = iSnap.data ?? 0;
+                                        return Text(
+                                          c == 1 ? "$c Bild" : "$c Bilder",
+                                          style: const TextStyle(fontSize: 15, height: 1.1, color: Colors.grey),
+                                        );
+                                      },
                                     ),
-                                  ),
+                                  ],
                                 ),
 
-                                // SubscriberCount live
+                                const SizedBox(height: 4),
+
                                 StreamBuilder<int>(
                                   stream: widget.ownerSubscriberCountStream,
                                   builder: (context, sSnap) {
-                                    final count = sSnap.data ?? 0;
+                                    final c = sSnap.data ?? 0;
                                     return Text(
-                                      count == 1 ? "$count Abonnent" : "$count Abonnenten",
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        height: 0,
-                                        color: Colors.grey,
-                                      ),
+                                      c == 1 ? "$c Abonnent" : "$c Abonnenten",
+                                      style: const TextStyle(fontSize: 15, height: 1.1, color: Colors.grey),
                                     );
                                   },
                                 ),
@@ -232,6 +201,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                         ),
                       ),
                     ),
+
                   ],
                 ),
 
@@ -403,3 +373,4 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
   }
 
 }
+
