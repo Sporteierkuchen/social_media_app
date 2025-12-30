@@ -1,7 +1,6 @@
 // lib/widgets/post_widget.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import '../models/Meldung.dart';
 import '../models/PostDto.dart';
 import '../repositories/post_repository.dart';
@@ -196,7 +195,6 @@ class PostWidgetState extends State<PostWidget> {
                                     if (!mounted) return;
                                     if (!canInteract) return;
 
-                                    Navigator.of(dialogCtx).pop();
                                     setState(() => canInteract = false);
 
                                     await _deletePost(post);
@@ -204,9 +202,7 @@ class PostWidgetState extends State<PostWidget> {
                                     if (!mounted) return;
                                     setState(() => canInteract = true);
                                   },
-                                  onCancel: () {
-                                    Navigator.of(dialogCtx).pop();
-                                  },
+                                  onCancel: () {},
                                 ),
                               );
                             },

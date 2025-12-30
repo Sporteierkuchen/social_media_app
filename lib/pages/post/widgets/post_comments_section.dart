@@ -88,9 +88,14 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
               Expanded(
                 child: TextField(
                   controller: _commentController,
+                  cursorColor: Colors.black,
+                  style: const TextStyle(
+                    color: Colors.black,   // ✅ Eingabetext lesbar
+                    fontSize: 16,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Schreibe einen Kommentar...',
-                    hintStyle: const TextStyle(color: Colors.black),
+                    hintStyle: const TextStyle(color: Colors.grey),
                     fillColor: Colors.white,
                     filled: true,
                     enabledBorder: OutlineInputBorder(

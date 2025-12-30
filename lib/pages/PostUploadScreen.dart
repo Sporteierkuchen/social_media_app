@@ -250,7 +250,7 @@ class _PostUploadScreenState extends State<PostUploadScreen> {
 
       // 2) Firestore -> posts
       await FirebaseFirestore.instance.collection('posts').add({
-        'type': _type == UploadType.video ? 'post' : 'image',
+        'type': _type == UploadType.video ? 'video' : 'image',
         'title': title,
         'category': _selectedCategories,
         'mediaUrl': mediaUrl,

@@ -58,9 +58,14 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
                 Expanded(
                   child: TextField(
                     controller: _replyController,
+                    cursorColor: Colors.black,
+                    style: const TextStyle(
+                      color: Colors.black,   // ✅ Eingabetext lesbar
+                      fontSize: 16,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Schreibe eine Antwort...',
-                      hintStyle: const TextStyle(color: Colors.black),
+                      hintStyle: const TextStyle(color: Colors.grey),
                       fillColor: Colors.white,
                       filled: true,
                       enabledBorder: OutlineInputBorder(
@@ -73,6 +78,7 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
                       ),
                     ),
                   ),
+
                 ),
                 _isSendingReply
                     ? const SizedBox(
