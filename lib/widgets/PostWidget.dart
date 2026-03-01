@@ -209,8 +209,7 @@ class PostWidgetState extends State<PostWidget> {
                                     setState(() => canInteract = true);
                                   },
                                   onCancel: () {
-                                    // kein Navigator.pop() hier
-                                    // der Dialog schließt sich selbst
+                                    //Navigator.of(dialogCtx).pop();
                                   },
                                 ),
                               );

@@ -291,8 +291,8 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
       context,
       MaterialPageRoute(
         builder: (context) => UserInfoPage(
-          userID: widget.post.userid,
-          viewerID: widget.viewerData.userid!
+            userID: widget.post.userid,
+            viewerID: widget.viewerData.userid!
         ),
       ),
     );
