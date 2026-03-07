@@ -1,6 +1,7 @@
 // lib/repositories/auth_repository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import '../models/Meldung.dart';
 
 
@@ -253,12 +254,21 @@ class AuthRepository {
   }
 
   Future<bool> isNicknameAvailable(String nickname) async {
-    final result = await _firestore.collection('users')
-        .where('benutzername', isEqualTo: nickname)
-        .limit(1)
-        .get();
+    try {
+      final result = await FirebaseFirestore.instance
+          .collection("users")
+          .where("benutzername", isEqualTo: nickname)
+          .limit(1)
+          .get();
 
-    return result.docs.isEmpty;
+      return result.docs.isEmpty;
+    } on FirebaseException catch (e) {
+      debugPrint("Fehler bei Nickname-Prüfung: ${e.code} - ${e.message}");
+      rethrow;
+    } catch (e) {
+      debugPrint("Unerwarteter Fehler bei Nickname-Prüfung: $e");
+      rethrow;
+    }
   }
 
   // ------------------------------------------------------------

@@ -415,8 +415,15 @@ class RegistrationpageState extends State<RegistrationPage> {
 
     if (nickname.isEmpty) {
       buffer.writeln("Gebe deinen Benutzernamen ein!");
-    } else if (!await _authRepository.isNicknameAvailable(nickname)) {
-      buffer.writeln("Dieser Benutzername ist bereits vergeben!!");
+    } else {
+      try {
+        final available = await _authRepository.isNicknameAvailable(nickname);
+        if (!available) {
+          buffer.writeln("Dieser Benutzername ist bereits vergeben!");
+        }
+      } catch (e) {
+        buffer.writeln("Benutzername konnte gerade nicht geprüft werden.");
+      }
     }
 
     if (firstname.isEmpty) buffer.writeln("Gebe deinen Vornamen ein!");
