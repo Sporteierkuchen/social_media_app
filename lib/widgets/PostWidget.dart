@@ -209,7 +209,8 @@ class PostWidgetState extends State<PostWidget> {
                                     setState(() => canInteract = true);
                                   },
                                   onCancel: () {
-                                    //Navigator.of(dialogCtx).pop();
+                                    // kein Navigator.pop() hier
+                                    // der Dialog schließt sich selbst
                                   },
                                 ),
                               );
@@ -228,7 +229,6 @@ class PostWidgetState extends State<PostWidget> {
                     ),
                   )
                       : const SizedBox.shrink(),
-
 
                 ],
               ),
