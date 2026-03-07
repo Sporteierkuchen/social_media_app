@@ -170,14 +170,20 @@ class PostWidgetState extends State<PostWidget> {
                   ),
 
                   // ---------------- DELETE ICON (nur Uploader) ----------------
+                  // ---------------- DELETE ICON (nur Uploader) ----------------
                   _isUploader()
                       ? Expanded(
                     child: Container(
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: canInteract
-                          ? GestureDetector(
-                        onTap: () async {
+                          ? IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.grey,
+                          size: 25,
+                        ),
+                        onPressed: () async {
                           await showDialog(
                             barrierDismissible: false,
                             context: context,
@@ -190,10 +196,10 @@ class PostWidgetState extends State<PostWidget> {
                                 ),
                                 child: BestaetigungsDialog(
                                   title: "Beitrag löschen",
-                                  message: "Soll der Beitrag \"${post.title}\" wirklich gelöscht werden?",
+                                  message:
+                                  'Soll der Beitrag "${post.title}" wirklich gelöscht werden?',
                                   onConfirm: () async {
-                                    if (!mounted) return;
-                                    if (!canInteract) return;
+                                    if (!mounted || !canInteract) return;
 
                                     setState(() => canInteract = false);
 
@@ -202,17 +208,15 @@ class PostWidgetState extends State<PostWidget> {
                                     if (!mounted) return;
                                     setState(() => canInteract = true);
                                   },
-                                  onCancel: () {},
+                                  onCancel: () {
+                                    // kein Navigator.pop() hier
+                                    // der Dialog schließt sich selbst
+                                  },
                                 ),
                               );
                             },
                           );
                         },
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.grey,
-                          size: 25,
-                        ),
                       )
                           : const SizedBox(
                         width: 15,
@@ -225,6 +229,8 @@ class PostWidgetState extends State<PostWidget> {
                     ),
                   )
                       : const SizedBox.shrink(),
+
+
                 ],
               ),
             ),
@@ -242,37 +248,22 @@ class PostWidgetState extends State<PostWidget> {
     if (!mounted) return;
 
     try {
-
       final success = await widget.postRepository.deletePost(post.id);
+
+      if (!mounted) return;
 
       HelperUtil.getToast(
         meldung: Meldung(
-          meldungsart: Meldungsart.INFO,
-          text: "Delete kommt gleich – sobald deletePost() im Repository existiert.",
+          meldungsart: success ? Meldungsart.SUCCESS : Meldungsart.ERROR,
+          text: success
+              ? 'Der Post "${post.title}" wurde gelöscht!'
+              : 'Fehler beim Löschen des Posts "${post.title}"!',
         ),
         context: context,
       );
-
-      if (success) {
-        HelperUtil.getToast(
-          meldung: Meldung(
-            meldungsart: Meldungsart.SUCCESS,
-            text: 'Der Post "${post.title}" wurde gelöscht!',
-          ),
-          context: context,
-        );
-        // kein reload nötig – stream updated automatisch
-      } else {
-        HelperUtil.getToast(
-          meldung: Meldung(
-            meldungsart: Meldungsart.ERROR,
-            text: 'Fehler beim Löschen des Posts "${post.title}"!',
-          ),
-          context: context,
-        );
-      }
-
     } catch (e) {
+      if (!mounted) return;
+
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
