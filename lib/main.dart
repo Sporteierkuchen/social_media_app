@@ -1,14 +1,20 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:social_media_app/repositories/auth_repository.dart';
 
 import 'constants/app_strings.dart';
 import 'theme/app_colors.dart';
-import 'pages/BottomNavigationBar.dart';
 import 'pages/LoginPage.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Background Nachricht: ${message.messageId}");
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +23,10 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  await LocalNotificationService.init();
 
   debugPrint("[Main] Firebase initialisiert, starte App...");
   runApp(MyApp());
@@ -64,7 +74,7 @@ class MyApp extends StatelessWidget {
             debugPrint(
               "[MyApp] Auth-State: LOGGED IN -> uid=${snapshot.data!.uid}",
             );
-            return const BottomNavBar(index: 0);
+            return const AuthenticatedRoot(index: 0);
           } else {
             debugPrint("[MyApp] Auth-State: LOGGED OUT -> LoginPage");
             return const LoginPage();

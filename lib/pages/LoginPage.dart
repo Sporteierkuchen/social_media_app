@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/Meldung.dart';
 import '../repositories/auth_repository.dart';
-import '../util/HelperUtil.dart';
+import '../services/PushService.dart';
+import '../services/sounds.dart';
 import '../widgets/TextInput.dart';
 import '../widgets/Captcha/Captcha_tile.dart';
 import 'BottomNavigationBar.dart';
 import 'RegistrationPage.dart';
+import 'authenticated_root.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -292,15 +294,26 @@ class LoginPageState extends State<LoginPage> {
     );
 
     if (meldung.meldungsart == Meldungsart.SUCCESS) {
-      if (mounted) {
+      print("Login erfolgreich!");
+      await Soundplayer.playLoginRegisterSound();
+
+/*      if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const BottomNavBar(index: 0)),
+          MaterialPageRoute(
+            builder: (context) => const AuthenticatedRoot(index: 0),
+          ),
         );
-      }
+      }*/
+
+
     }
 
-    HelperUtil.getToast(meldung: meldung, context: context);
+/*    HelperUtil.getToast(
+        meldung: meldung,
+        context: context
+    );*/
+
   }
 
   bool checkUserInput() {
