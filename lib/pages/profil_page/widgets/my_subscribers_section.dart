@@ -99,6 +99,7 @@ class MySubscribersSection extends StatelessWidget {
                 final abbonent = SubscriptionDto.fromSnapshot(doc); // siehe unten
 
                 return AbbonentWidget(
+                  key: ValueKey(doc.id),
                   abbonent: abbonent,
                   viewerData: userData,
                   userRepository: userRepository,

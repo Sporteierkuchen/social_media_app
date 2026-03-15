@@ -12,11 +12,14 @@ class AbboniertWidget extends StatefulWidget {
   final UserDto viewerData;
   final UserRepository userRepository;
 
+  final void Function(String text, Meldungsart art)? onMessage;
+
   const AbboniertWidget({
     super.key,
     required this.abbonent,
     required this.viewerData,
     required this.userRepository,
+    this.onMessage,
   });
 
   @override
@@ -28,13 +31,11 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // In "Abboniert" ist target = subscribedToId (also wem der Viewer folgt)
+
     final targetId = widget.abbonent.subscribedToId;
 
     return GestureDetector(
       onTap: () async {
-        // Optional: wenn du NICHT willst, dass beim Klick auf Button auch Profil öffnet,
-        // dann später im Button onTap -> onTapDown/AbsorbPointer etc. (wie bei AbbonentWidget auch)
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -50,6 +51,7 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             // Profilbild
             Container(
               decoration: BoxDecoration(
@@ -88,6 +90,7 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
                 ),
                 child: Column(
                   children: [
+
                     Row(
                       children: [
                         Expanded(
@@ -99,12 +102,11 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
-                            textAlign: TextAlign.start,
-                            softWrap: true,
                           ),
                         ),
                       ],
                     ),
+
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Row(
@@ -116,10 +118,7 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
                                 fontSize: 14,
                                 height: 0,
                                 color: Colors.grey,
-                                fontWeight: FontWeight.normal,
                               ),
-                              textAlign: TextAlign.start,
-                              softWrap: true,
                             ),
                           ),
                         ],
@@ -132,11 +131,12 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
 
             // Role Icon
             Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 12, right: 10, left: 3),
+              padding: const EdgeInsets.only(
+                  top: 12, bottom: 12, right: 10, left: 3),
               child: HelperUtil.getUserIcon(widget.abbonent.subscriberToRole),
             ),
 
-            // Button (nur wenn viewer != target)
+            // Subscribe Button
             !_isSelf(targetId)
                 ? Expanded(
               flex: 45,
@@ -146,16 +146,20 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
                   targetId: targetId,
                 ),
                 builder: (context, snap) {
+
                   final subscribed = snap.data ?? false;
 
-                  if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+                  if (snap.connectionState ==
+                      ConnectionState.waiting &&
+                      !snap.hasData) {
                     return const Center(
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         child: SizedBox(
                           width: 25,
                           height: 25,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 3),
                         ),
                       ),
                     );
@@ -163,24 +167,33 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
 
                   return canInteract
                       ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding:
+                    const EdgeInsets.symmetric(vertical: 12),
                     child: GestureDetector(
                       onTap: () async {
-                        await _toggleAbo(subscribed: subscribed, targetId: targetId);
+                        await _toggleAbo(
+                            subscribed: subscribed,
+                            targetId: targetId);
                       },
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          color: subscribed ? Colors.black : Colors.indigo[900],
+                          color: subscribed
+                              ? Colors.black
+                              : Colors.indigo[900],
                           border: subscribed
-                              ? Border.all(color: Colors.white, width: 1)
-                              : Border.all(color: Colors.transparent),
+                              ? Border.all(
+                              color: Colors.white, width: 1)
+                              : Border.all(
+                              color: Colors.transparent),
                         ),
                         alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 8),
                         child: Text(
-                          subscribed ? "Deabbonieren" : "Abbonieren",
-                          softWrap: true,
+                          subscribed
+                              ? "Deabbonieren"
+                              : "Abbonieren",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -196,7 +209,8 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
                       child: SizedBox(
                         width: 25,
                         height: 25,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 3),
                       ),
                     ),
                   );
@@ -218,29 +232,37 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
     required bool subscribed,
     required String targetId,
   }) async {
+
     if (!canInteract) return;
+
     setState(() => canInteract = false);
 
     final viewerId = widget.viewerData.userid!;
 
+    final vorname = widget.abbonent.subscriberToVorname;
+    final nachname = widget.abbonent.subscriberToNachname;
+    final benutzername = widget.abbonent.subscriberToName;
+    final profilePic = widget.abbonent.subscriberToProfilePic;
+    final role = widget.abbonent.subscriberToRole;
+
     try {
+
       if (subscribed) {
+
         final success = await widget.userRepository.unsubscribe(
           viewerId: viewerId,
           userId: targetId,
         );
 
         if (success) {
-          HelperUtil.getToast(
-            meldung: Meldung(
-              meldungsart: Meldungsart.INFO,
-              text:
-              "Du hast ${widget.abbonent.subscriberToVorname} ${widget.abbonent.subscriberToNachname} deabboniert!",
-            ),
-            context: context,
+          widget.onMessage?.call(
+            "Du hast $vorname $nachname deabboniert!",
+            Meldungsart.INFO,
           );
         }
+
       } else {
+
         final viewerDataMap = {
           'benutzername': widget.viewerData.benutzername ?? '',
           'vorname': widget.viewerData.vorname ?? '',
@@ -250,11 +272,11 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
         };
 
         final targetDataMap = {
-          'benutzername': widget.abbonent.subscriberToName,
-          'vorname': widget.abbonent.subscriberToVorname,
-          'nachname': widget.abbonent.subscriberToNachname,
-          'profilePictureUrl': widget.abbonent.subscriberToProfilePic,
-          'role': widget.abbonent.subscriberToRole,
+          'benutzername': benutzername,
+          'vorname': vorname,
+          'nachname': nachname,
+          'profilePictureUrl': profilePic,
+          'role': role,
         };
 
         final success = await widget.userRepository.subscribe(
@@ -265,28 +287,25 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
         );
 
         if (success) {
-          HelperUtil.getToast(
-            meldung: Meldung(
-              meldungsart: Meldungsart.SUCCESS,
-              text:
-              "Du hast ${widget.abbonent.subscriberToVorname} ${widget.abbonent.subscriberToNachname} abboniert!",
-            ),
-            context: context,
+          widget.onMessage?.call(
+            "Du hast $vorname $nachname abboniert!",
+            Meldungsart.SUCCESS,
           );
         }
       }
+
     } catch (e) {
-      HelperUtil.getToast(
-        meldung: Meldung(
-          meldungsart: Meldungsart.ERROR,
-          text: "Fehler beim Abbonieren:\n$e",
-        ),
-        context: context,
+
+      widget.onMessage?.call(
+        "Fehler beim Abbonieren:\n$e",
+        Meldungsart.ERROR,
       );
+
     } finally {
+
       if (!mounted) return;
       setState(() => canInteract = true);
+
     }
   }
-
 }
