@@ -41,14 +41,17 @@ class PushService {
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       debugPrint("Foreground Nachricht: ${message.notification?.title}");
+      debugPrint("Foreground Text: ${message.notification?.body}");
       debugPrint("Foreground Daten: ${message.data}");
 
       final title = message.notification?.title ?? "Neue Benachrichtigung";
       final body = message.notification?.body ?? "";
+      final imageUrl = message.data["imageUrl"];
 
       await LocalNotificationService.showNotification(
         title: title,
         body: body,
+        imageUrl: imageUrl,
       );
     });
 
