@@ -7,201 +7,227 @@ admin.initializeApp();
 export const notifySubscribersOnNewPost = onDocumentCreated(
   "posts/{postId}",
   async (event) => {
-    const post = event.data?.data();
-    const postId = event.data?.id;
+    try {
+      const snapshot = event.data;
 
-    if (!post) {
-      console.log("Kein Post-Dokument gefunden.");
-      return;
-    }
-
-    console.log("Neuer Post erkannt:", postId);
-    console.log("Post-Daten:", JSON.stringify(post));
-
-    const creatorId = post.userid as string | undefined;
-    const type = (post.type as string | undefined) ?? "post";
-
-    const username = (post.benutzername as string | undefined) ?? "Ein Nutzer";
-    const vorname = (post.vorname as string | undefined) ?? "";
-    const nachname = (post.nachname as string | undefined) ?? "";
-
-    let fullName = `${vorname} ${nachname}`.trim();
-    if (fullName === "") {
-    fullName = username;
-    }
-
-    let emoji = "📢";
-
-    if (type.toLowerCase() === "video") {
-    emoji = "🎬";
-    } else if (type.toLowerCase() === "image" || type.toLowerCase() === "bild") {
-    emoji = "📸";
-    }
-
-    const title = (post.title as string | undefined) ?? "";
-    const thumbnailUrl = (post.thumbnailUrl as string | undefined) ?? "";
-    const mediaUrl = (post.mediaUrl as string | undefined) ?? "";
-
-    if (!creatorId) {
-      console.log("Abbruch: Post hat kein userid-Feld.");
-      return;
-    }
-
-    const imageUrl =
-      thumbnailUrl.trim() !== "" ? thumbnailUrl : mediaUrl;
-
-    let uploadText = "hat einen neuen Beitrag hochgeladen";
-    if (type.toLowerCase() === "video") {
-      uploadText = "hat ein neues Video hochgeladen";
-    } else if (
-      type.toLowerCase() === "image" ||
-      type.toLowerCase() === "bild"
-    ) {
-      uploadText = "hat ein neues Bild hochgeladen";
-    }
-
-    const subsSnapshot = await admin
-      .firestore()
-      .collection("subscriptions")
-      .where("subscribedToId", "==", creatorId)
-      .get();
-
-    console.log("Gefundene Subscriptions:", subsSnapshot.size);
-
-    if (subsSnapshot.empty) {
-      console.log("Keine Abonnenten gefunden.");
-      return;
-    }
-
-    const subscriberIds: string[] = [];
-
-    subsSnapshot.docs.forEach((doc) => {
-      const data = doc.data();
-      if (data.subscriberId) {
-        subscriberIds.push(data.subscriberId as string);
+      if (!snapshot) {
+        console.log("Kein Snapshot vorhanden.");
+        return;
       }
-    });
 
-    console.log("SubscriberIds:", JSON.stringify(subscriberIds));
+      const post = snapshot.data();
+      const postId = snapshot.id;
 
-    const tokenEntries: { uid: string; token: string }[] = [];
+      console.log("Neuer Post erkannt:", postId);
+      console.log("Post-Daten:", JSON.stringify(post));
 
-    for (const uid of subscriberIds) {
-      const tokenSnapshot = await admin
-        .firestore()
+      const creatorId = post.userid;
+      const username = post.benutzername ?? "User";
+      const vorname = post.vorname ?? "";
+      const nachname = post.nachname ?? "";
+      const type = post.type ?? "image";
+
+      let fullName = `${vorname} ${nachname}`.trim();
+      if (fullName === "") fullName = username;
+
+      let emoji = "📢";
+      let uploadText = "hat etwas hochgeladen";
+
+      if (type === "image") {
+        emoji = "📸";
+        uploadText = "hat ein neues Bild hochgeladen";
+      }
+
+      if (type === "video") {
+        emoji = "🎬";
+        uploadText = "hat ein neues Video hochgeladen";
+      }
+
+      const imageUrl =
+        post.thumbnailUrl && post.thumbnailUrl !== ""
+          ? post.thumbnailUrl
+          : post.mediaUrl ?? "";
+
+      const db = admin.firestore();
+
+      /*
+       ----------------------------------------
+       SUBSCRIPTIONS LADEN
+       ----------------------------------------
+      */
+
+      const subsSnapshot = await db
+        .collection("subscriptions")
+        .where("subscribedToId", "==", creatorId)
+        .get();
+
+      console.log("Gefundene Subscriptions:", subsSnapshot.size);
+
+      const subscriberIds: string[] = [];
+
+      subsSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const subscriberId = data.subscriberId as string | undefined;
+
+        if (!subscriberId) return;
+
+        if (subscriberId === creatorId) {
+          console.log("Uploader wird übersprungen.");
+          return;
+        }
+
+        subscriberIds.push(subscriberId);
+      });
+
+      const uniqueSubscriberIds = [...new Set(subscriberIds)];
+
+      console.log("SubscriberIds:", JSON.stringify(uniqueSubscriberIds));
+
+      /*
+       ----------------------------------------
+       TOKENS SAMMELN
+       ----------------------------------------
+      */
+
+      const tokenEntries: { uid: string; token: string }[] = [];
+
+      for (const uid of uniqueSubscriberIds) {
+        const tokenSnapshot = await db
+          .collection("users")
+          .doc(uid)
+          .collection("fcmTokens")
+          .get();
+
+        console.log(`Tokens für ${uid}:`, tokenSnapshot.size);
+
+        tokenSnapshot.docs.forEach((doc) => {
+          const token = doc.data().token as string | undefined;
+
+          if (token) {
+            tokenEntries.push({
+              uid,
+              token,
+            });
+          }
+        });
+      }
+
+      /*
+       ----------------------------------------
+       CREATOR TOKENS LADEN
+       ----------------------------------------
+      */
+
+      const creatorTokenSnapshot = await db
         .collection("users")
-        .doc(uid)
+        .doc(creatorId)
         .collection("fcmTokens")
         .get();
 
-      console.log(`Tokens für ${uid}:`, tokenSnapshot.size);
+      const creatorTokens = creatorTokenSnapshot.docs
+        .map((doc) => doc.data().token as string | undefined)
+        .filter((token): token is string => Boolean(token));
 
-      tokenSnapshot.docs.forEach((doc) => {
-        const token = doc.data().token as string | undefined;
-        if (token) {
-          tokenEntries.push({ uid, token });
-        }
-      });
-    }
+      console.log("Creator Tokens:", JSON.stringify(creatorTokens));
 
-    if (tokenEntries.length === 0) {
-      console.log("Keine Tokens gefunden.");
-      return;
-    }
+      /*
+       ----------------------------------------
+       TOKENS FILTERN
+       ----------------------------------------
+      */
 
-    const uniqueTokens = [...new Set(tokenEntries.map((entry) => entry.token))];
-    console.log("Gesammelte Tokens:", uniqueTokens.length);
+      const uniqueTokens = [
+        ...new Set(tokenEntries.map((entry) => entry.token)),
+      ].filter((token) => !creatorTokens.includes(token));
 
-    const androidNotification: {
-    channelId: string;
-    imageUrl?: string;
-    } = {
-    channelId: "high_importance_channel",
-    };
-
-    if (imageUrl.trim() !== "") {
-    androidNotification.imageUrl = imageUrl;
-    }
-
-    const response = await admin.messaging().sendEachForMulticast({
-    tokens: uniqueTokens,
-    notification: {
-    title: `${emoji} Neues von ${fullName}`,
-    body: `${username} ${uploadText}`,
-    },
-    android: {
-        priority: "high",
-        notification: androidNotification,
-    },
-    data: {
-        postId: String(postId),
-        creatorId: String(creatorId),
-        type: String(type),
-        postTitle: String(title),
-        imageUrl: String(imageUrl),
-        thumbnailUrl: String(thumbnailUrl),
-        mediaUrl: String(mediaUrl),
-    },
-    });
-
-
-    console.log("Push gesendet:", response.successCount);
-    console.log("Push Fehler:", response.failureCount);
-
-    const invalidTokens: string[] = [];
-
-    response.responses.forEach((resp, index) => {
-      if (!resp.success) {
-        const errorCode = resp.error?.code ?? "unknown";
-        const errorMessage = resp.error?.message ?? "Unbekannter Fehler";
-
-        console.log(
-          `Fehler bei Token ${index}: code=${errorCode}, message=${errorMessage}`,
-        );
-
-        if (
-          errorCode === "messaging/invalid-registration-token" ||
-          errorCode === "messaging/registration-token-not-registered"
-        ) {
-          invalidTokens.push(uniqueTokens[index]);
-        }
-      }
-    });
-
-    if (invalidTokens.length > 0) {
       console.log(
-        "Ungültige Tokens werden gelöscht:",
-        JSON.stringify(invalidTokens),
+        "Gesammelte Tokens nach Creator-Filter:",
+        uniqueTokens.length
       );
 
-      for (const invalidToken of invalidTokens) {
-        const affectedEntries = tokenEntries.filter(
-          (entry) => entry.token === invalidToken,
-        );
-
-        for (const entry of affectedEntries) {
-          await admin
-            .firestore()
-            .collection("users")
-            .doc(entry.uid)
-            .collection("fcmTokens")
-            .doc(invalidToken)
-            .delete()
-            .then(() => {
-              console.log(
-                `Ungültiges Token gelöscht bei User ${entry.uid}: ${invalidToken}`,
-              );
-            })
-            .catch((err) => {
-              console.log(
-                `Fehler beim Löschen von Token ${invalidToken} bei User ${entry.uid}:`,
-                err,
-              );
-            });
-        }
+      if (uniqueTokens.length === 0) {
+        console.log("Keine Tokens nach Creator-Filter übrig.");
+        return;
       }
+
+      /*
+       ----------------------------------------
+       PUSH SENDEN
+       ----------------------------------------
+      */
+
+      const message: admin.messaging.MulticastMessage = {
+        tokens: uniqueTokens,
+
+        notification: {
+          title: `${emoji} Neues von ${fullName}`,
+          body: `${username} ${uploadText}`,
+        },
+
+        data: {
+          postId: postId,
+          creatorId: creatorId,
+          type: type,
+          imageUrl: imageUrl,
+          mediaUrl: post.mediaUrl ?? "",
+          thumbnailUrl: post.thumbnailUrl ?? "",
+          postTitle: post.title ?? "",
+        },
+
+        android: {
+          notification: {
+            imageUrl: imageUrl,
+            priority: "high",
+          },
+        },
+      };
+
+      const response = await admin.messaging().sendEachForMulticast(message);
+
+      console.log("Push gesendet:", response.successCount);
+      console.log("Push Fehler:", response.failureCount);
+
+      /*
+       ----------------------------------------
+       UNGÜLTIGE TOKENS LÖSCHEN
+       ----------------------------------------
+      */
+
+      const invalidTokens: { uid: string; token: string }[] = [];
+
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          const error = resp.error;
+
+          if (
+            error?.code === "messaging/registration-token-not-registered" ||
+            error?.code === "messaging/invalid-registration-token"
+          ) {
+            const token = uniqueTokens[idx];
+
+            const entry = tokenEntries.find((e) => e.token === token);
+
+            if (entry) {
+              invalidTokens.push(entry);
+            }
+          }
+        }
+      });
+
+      for (const entry of invalidTokens) {
+        console.log("Lösche ungültigen Token:", entry.token);
+
+        await db
+          .collection("users")
+          .doc(entry.uid)
+          .collection("fcmTokens")
+          .doc(entry.token)
+          .delete();
+      }
+    } catch (error) {
+      console.error("Fehler in notifySubscribersOnNewPost:", error);
     }
-  },
+  }
 );
 
 export const sendTestPushToAll = onRequest(async (req, res) => {

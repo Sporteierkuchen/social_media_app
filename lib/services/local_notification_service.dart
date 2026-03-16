@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -9,6 +7,8 @@ class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
   FlutterLocalNotificationsPlugin();
 
+  static void Function(String payload)? onNotificationTap;
+
   static Future<void> init() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -16,7 +16,15 @@ class LocalNotificationService {
       android: androidSettings,
     );
 
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        final payload = response.payload;
+        if (payload != null && onNotificationTap != null) {
+          onNotificationTap!(payload);
+        }
+      },
+    );
 
     const androidChannel = AndroidNotificationChannel(
       'high_importance_channel',
@@ -35,6 +43,7 @@ class LocalNotificationService {
     required String title,
     required String body,
     String? imageUrl,
+    String? payload,
   }) async {
     if (imageUrl != null && imageUrl.isNotEmpty) {
       try {
@@ -62,12 +71,12 @@ class LocalNotificationService {
         final details = NotificationDetails(android: androidDetails);
 
         await _plugin.show(
-          0,
+          DateTime.now().millisecondsSinceEpoch ~/ 1000,
           title,
           body,
           details,
+          payload: payload,
         );
-
         return;
       } catch (e) {
         print("Fehler beim Laden des Bildes für Notification: $e");
@@ -85,10 +94,11 @@ class LocalNotificationService {
     const details = NotificationDetails(android: androidDetails);
 
     await _plugin.show(
-      0,
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
       details,
+      payload: payload,
     );
   }
 

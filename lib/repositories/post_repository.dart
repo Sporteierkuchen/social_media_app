@@ -39,6 +39,21 @@ class PostRepository {
   CollectionReference get _comments => _firestore.collection('comments');
   CollectionReference get _replies => _firestore.collection('replies');
 
+  Future<PostDto?> getPostById(String postId) async {
+    try {
+      final doc = await _posts.doc(postId).get();
+
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+
+      return PostDto.fromDoc(doc);
+    } catch (e) {
+      debugPrint("[PostRepository] Fehler beim Laden des Posts: $e");
+      return null;
+    }
+  }
+
   Stream<PostDto?> getPostStream(String postId) {
     return _posts.doc(postId).snapshots().map((snap) {
       if (!snap.exists) return null;

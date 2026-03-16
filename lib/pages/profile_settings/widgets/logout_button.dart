@@ -1,8 +1,7 @@
 // lib/pages/profile_settings/widgets/logout_button.dart
 import 'package:flutter/material.dart';
-import '../../../models/Meldung.dart';
-import '../../../repositories/auth_repository.dart';
-import '../../../util/HelperUtil.dart';
+
+import '../../../services/PushService.dart';
 import '../../LoginPage.dart';
 
 class LogoutButton extends StatefulWidget {
@@ -68,6 +67,7 @@ class _LogoutButtonState extends State<LogoutButton> {
       );
 
       // 2) SignOut
+      await PushService().removeCurrentToken();
       await widget.authRepository.signOut();
 
       debugPrint("[LogoutButton] Logout done");
