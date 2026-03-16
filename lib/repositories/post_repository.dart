@@ -54,6 +54,29 @@ class PostRepository {
     }
   }
 
+  Future<List<PostDto>> getPostsByIds(List<String> postIds) async {
+    try {
+      if (postIds.isEmpty) {
+        return [];
+      }
+
+      final futures = postIds.map((id) => _posts.doc(id).get()).toList();
+      final docs = await Future.wait(futures);
+
+      final posts = docs
+          .where((doc) => doc.exists && doc.data() != null)
+          .map((doc) => PostDto.fromDoc(doc))
+          .toList();
+
+      posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      return posts;
+    } catch (e) {
+      debugPrint("[PostRepository] Fehler beim Laden mehrerer Posts: $e");
+      return [];
+    }
+  }
+
   Stream<PostDto?> getPostStream(String postId) {
     return _posts.doc(postId).snapshots().map((snap) {
       if (!snap.exists) return null;

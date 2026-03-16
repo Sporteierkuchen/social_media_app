@@ -8,7 +8,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../pages/BottomNavigationBar.dart';
 import '../pages/post/Post.dart';
+import '../pages/post/creator_posts_page.dart';
 import '../repositories/post_repository.dart';
+import '../repositories/user_repository.dart';
 import 'local_notification_service.dart';
 import 'navigation_service.dart';
 
@@ -17,6 +19,7 @@ class PushService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final PostRepository _postRepository = PostRepository();
+  final UserRepository _userRepository = UserRepository();
 
   Future<void> init() async {
 
@@ -68,12 +71,40 @@ class PushService {
       final imageUrl = message.data["imageUrl"];
       final payload = jsonEncode(message.data);
 
+      final postId = message.data["postId"];
+      final creatorId = message.data["creatorId"] ?? "unknown_creator";
+      final type = (message.data["type"] ?? "post").toString().toLowerCase();
+      final creatorName = title.replaceFirst(RegExp(r'^[^\w]*Neues von '), '').trim();
+
+      String groupKey = "creator_${creatorId}_post";
+      String groupTitle = "Neue Uploads von $creatorName";
+
+      if (type == "image" || type == "bild") {
+        groupKey = "creator_${creatorId}_image";
+        groupTitle = "📸 Neue Bilder von $creatorName";
+      } else if (type == "video") {
+        groupKey = "creator_${creatorId}_video";
+        groupTitle = "🎬 Neue Videos von $creatorName";
+      }
+
+      final summaryPayload = jsonEncode({
+        "action": "open_creator_group",
+        "creatorId": creatorId,
+        "type": type,
+        "creatorName": creatorName,
+      });
+
       await LocalNotificationService.showNotification(
         title: title,
         body: body,
         imageUrl: imageUrl,
         payload: payload,
+        groupKey: groupKey,
+        groupTitle: groupTitle,
+        summaryPayload: summaryPayload,
+        postId: postId,
       );
+
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
@@ -125,6 +156,13 @@ class PushService {
 
   Future<void> _handleMessageNavigation(RemoteMessage message) async {
     try {
+      final action = message.data["action"];
+
+      if (action == "open_creator_group") {
+        await _openCreatorGroup(message.data);
+        return;
+      }
+
       final postId = message.data["postId"];
       final currentUser = _auth.currentUser;
 
@@ -176,6 +214,73 @@ class PushService {
       );
     } catch (e) {
       debugPrint("Fehler bei Push-Navigation: $e");
+    }
+  }
+
+  Future<void> _openCreatorGroup(Map<String, dynamic> data) async {
+    try {
+      final creatorId = data["creatorId"];
+      final type = data["type"];
+      final rawPostIds = data["postIds"];
+      final currentUser = _auth.currentUser;
+
+      if (creatorId == null || creatorId.toString().isEmpty) {
+        debugPrint("Keine creatorId für Gruppen-Navigation gefunden.");
+        return;
+      }
+
+      if (currentUser == null) {
+        debugPrint("Kein eingeloggter User vorhanden.");
+        return;
+      }
+
+      final postIds = rawPostIds is List
+          ? rawPostIds.map((e) => e.toString()).toList()
+          : <String>[];
+
+      final currentUserRole = await _userRepository.getUserRole(currentUser.uid);
+      final creator = await _userRepository.getUserDetailsDto(creatorId.toString());
+
+      if (creator == null) {
+        debugPrint("Creator konnte nicht geladen werden.");
+        return;
+      }
+
+      final context = NavigationService.navigatorKey.currentContext;
+      if (context == null) {
+        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const BottomNavBar(index: 0),
+        ),
+            (route) => false,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final newContext = NavigationService.navigatorKey.currentContext;
+      if (newContext == null) {
+        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
+        return;
+      }
+
+      Navigator.of(newContext).push(
+        MaterialPageRoute(
+          builder: (_) => CreatorPostsPage(
+            creatorId: creatorId.toString(),
+            currentUserId: currentUser.uid,
+            currentUserRole: currentUserRole,
+            type: type?.toString(),
+            postIds: postIds,
+            creator: creator,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Fehler bei Gruppen-Navigation: $e");
     }
   }
 

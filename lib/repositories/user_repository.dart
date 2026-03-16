@@ -95,6 +95,26 @@ class UserRepository {
     }
   }
 
+  Future<String> getUserRole(String uid) async {
+    try {
+      final rawSnap = await _users.doc(uid).get();
+
+      if (!rawSnap.exists) {
+        return "USER";
+      }
+
+      final data = rawSnap.data() as Map<String, dynamic>?;
+      if (data == null) {
+        return "USER";
+      }
+
+      return (data["role"] as String?) ?? "USER";
+    } catch (e) {
+      print("Fehler beim Laden der User-Rolle: $e");
+      return "USER";
+    }
+  }
+
   Query<Map<String, dynamic>> usersQuery({
     required String search,
     int limit = 20,
