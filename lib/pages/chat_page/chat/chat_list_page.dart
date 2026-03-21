@@ -5,6 +5,7 @@ import '../../../models/UserDto.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../repositories/chat_repository.dart';
 import '../../../repositories/user_repository.dart';
+import '../../../services/local_notification_service.dart';
 import 'chat_page.dart';
 import 'new_chat_page.dart';
 
@@ -160,6 +161,8 @@ class ChatListPage extends StatelessWidget {
                         final me = await _userRepo.getUserDetailsDto(myUid);
                         if (me == null || other == null) return;
                         if (!context.mounted) return;
+
+                        await LocalNotificationService.clearChatNotifications(chatId);
 
                         Navigator.push(
                           context,

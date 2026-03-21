@@ -4,8 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../../models/UserDto.dart';
+import '../../../repositories/auth_repository.dart';
 import '../../../repositories/chat_repository.dart';
-import '../../../repositories/user_repository.dart';
+import '../../../services/chat_state_service.dart';
+import '../../../services/local_notification_service.dart';
 import '../../user_info_page/UserInfoPage.dart';
 
 class ChatPage extends StatefulWidget {
@@ -24,10 +26,10 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final _chatRepo = ChatRepository();
   final _textCtrl = TextEditingController();
-  final _userRepo = UserRepository();
+  final _authRepo = AuthRepository();
 
   String? _chatId;
   bool _creatingChat = false;
@@ -38,18 +40,70 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _chatId = widget.chatId;
 
     if (_chatId != null) {
       _scheduleMarkRead();
+      _setActiveChat();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await LocalNotificationService.clearChatNotifications(_chatId!);
+      });
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _markReadDebounce?.cancel();
+    _clearActiveChat();
     _textCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_authRepo.currentUserId == null) return;
+
+    if (state == AppLifecycleState.resumed) {
+      _setActiveChat();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _clearActiveChat();
+    }
+  }
+
+  Future<void> _setActiveChat() async {
+    final uid = _authRepo.currentUserId;
+    final cid = _chatId;
+
+    if (uid == null || cid == null || cid.isEmpty) return;
+
+    ChatStateService.currentOpenChatId = cid;
+
+    await _chatRepo.setActiveChat(
+      userId: uid,
+      chatId: cid,
+    );
+  }
+
+  Future<void> _clearActiveChat() async {
+    final uid = _authRepo.currentUserId;
+    final cid = _chatId;
+
+    if (uid == null) return;
+
+    if (cid != null && ChatStateService.currentOpenChatId == cid) {
+      ChatStateService.currentOpenChatId = null;
+    }
+
+    await _chatRepo.setActiveChat(
+      userId: uid,
+      chatId: null,
+    );
   }
 
   void _scheduleMarkRead() {
@@ -92,6 +146,10 @@ class _ChatPageState extends State<ChatPage> {
       }
 
       if (!mounted) return;
+
+      await _setActiveChat();
+      await LocalNotificationService.clearChatNotifications(_chatId!);
+
       setState(() {});
     }
 
@@ -102,7 +160,6 @@ class _ChatPageState extends State<ChatPage> {
       text: text,
     );
 
-    // optional: kann bleiben, ist aber nicht zwingend nötig
     _scheduleMarkRead();
   }
 
@@ -191,21 +248,26 @@ class _ChatPageState extends State<ChatPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => UserInfoPage(userID: uid, viewerID: widget.me.userid!), // <-- Parameter anpassen
+                      builder: (_) => UserInfoPage(
+                        userID: uid,
+                        viewerID: widget.me.userid!,
+                      ),
                     ),
                   );
                 },
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 8), // damit Ripple nicht abgeschnitten wirkt
+                  padding: const EdgeInsets.only(right: 8),
                   child: Row(
                     children: [
                       const SizedBox(width: 6),
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.grey.shade800,
-                        backgroundImage: otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
+                        backgroundImage:
+                        otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
                         child: otherPic.isEmpty
-                            ? const Icon(Icons.person, color: Colors.white, size: 18)
+                            ? const Icon(Icons.person,
+                            color: Colors.white, size: 18)
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -224,7 +286,8 @@ class _ChatPageState extends State<ChatPage> {
                             isOnline ? "online" : _lastSeenLabel(lastActiveAt),
                             style: TextStyle(
                               fontSize: 12,
-                              color: isOnline ? Colors.orange : Colors.white54,
+                              color:
+                              isOnline ? Colors.orange : Colors.white54,
                               height: 1.0,
                             ),
                           ),
@@ -251,7 +314,9 @@ class _ChatPageState extends State<ChatPage> {
               builder: (context, chatSnap) {
                 final chatData = chatSnap.data?.data() ?? {};
                 final lastReadAtMap =
-                    (chatData["lastReadAtMap"] as Map?)?.cast<String, dynamic>() ?? {};
+                    (chatData["lastReadAtMap"] as Map?)
+                        ?.cast<String, dynamic>() ??
+                        {};
 
                 final otherLastReadTs =
                 lastReadAtMap[widget.other.userid] as Timestamp?;
@@ -263,13 +328,17 @@ class _ChatPageState extends State<ChatPage> {
                   builder: (context, snap, _) {
                     if (snap.hasError) {
                       return const Center(
-                        child: Text("Fehler beim Laden",
-                            style: TextStyle(color: Colors.red)),
+                        child: Text(
+                          "Fehler beim Laden",
+                          style: TextStyle(color: Colors.red),
+                        ),
                       );
                     }
                     if (snap.isFetching && snap.docs.isEmpty) {
                       return const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
                       );
                     }
 
@@ -292,7 +361,9 @@ class _ChatPageState extends State<ChatPage> {
                           return const Padding(
                             padding: EdgeInsets.all(12),
                             child: Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                             ),
                           );
                         }
@@ -300,7 +371,8 @@ class _ChatPageState extends State<ChatPage> {
                         final doc = docs[index];
                         final data = doc.data();
 
-                        final isMe = data["senderId"] == widget.me.userid;
+                        final isMe =
+                            data["senderId"] == widget.me.userid;
                         final text = (data["text"] ?? "").toString();
                         final createdAt = data["createdAt"] as Timestamp?;
 
@@ -309,7 +381,8 @@ class _ChatPageState extends State<ChatPage> {
                         DateTime? olderDay;
                         if (index + 1 < docs.length) {
                           final olderData = docs[index + 1].data();
-                          final olderTs = olderData["createdAt"] as Timestamp?;
+                          final olderTs =
+                          olderData["createdAt"] as Timestamp?;
                           olderDay = _dateOnlyFromTs(olderTs);
                         }
 
@@ -319,27 +392,27 @@ class _ChatPageState extends State<ChatPage> {
 
                         final msgTime = createdAt?.toDate();
 
-                        // ✅ FIX: read wenn otherLastReadAt >= msgTime
                         final isReadByOther = isMe &&
                             msgTime != null &&
                             otherLastReadAt != null &&
                             !otherLastReadAt.isBefore(msgTime);
 
-                        // ✅ delivered: sobald createdAt existiert (server-side gespeichert)
                         final isDelivered = isMe && createdAt != null;
 
                         return Column(
                           children: [
                             if (showDayHeader) ...[
-                              _DayHeader(label: _dayLabel(thisDay!)),
+                              _DayHeader(label: _dayLabel(thisDay)),
                               const SizedBox(height: 6),
                             ],
                             _ChatBubble(
                               isMe: isMe,
                               text: text,
                               timeLabel: _formatTime(createdAt),
-                              otherName: widget.other.benutzername ?? "User",
-                              otherPic: widget.other.profilePictureUrl ?? "",
+                              otherName:
+                              widget.other.benutzername ?? "User",
+                              otherPic:
+                              widget.other.profilePictureUrl ?? "",
                               showTicks: isMe,
                               delivered: isDelivered,
                               read: isReadByOther,
@@ -353,14 +426,15 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
-
           SafeArea(
             top: false,
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               decoration: BoxDecoration(
                 color: Colors.black,
-                border: Border(top: BorderSide(color: Colors.grey.shade900, width: 1)),
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade900, width: 1),
+                ),
               ),
               child: Row(
                 children: [
@@ -416,7 +490,10 @@ class _DayHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: Colors.grey.shade800),
         ),
-        child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
       ),
     );
   }
@@ -480,7 +557,8 @@ class _ChatBubble extends StatelessWidget {
         margin: margin,
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (!isMe)
               Padding(
@@ -491,13 +569,21 @@ class _ChatBubble extends StatelessWidget {
                     CircleAvatar(
                       radius: 12,
                       backgroundColor: Colors.grey.shade800,
-                      backgroundImage: otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
+                      backgroundImage:
+                      otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
                       child: otherPic.isEmpty
-                          ? const Icon(Icons.person, color: Colors.white, size: 14)
+                          ? const Icon(Icons.person,
+                          color: Colors.white, size: 14)
                           : null,
                     ),
                     const SizedBox(width: 8),
-                    Text(otherName, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(
+                      otherName,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -509,16 +595,24 @@ class _ChatBubble extends StatelessWidget {
               ),
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
               child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
-                  Text(text, style: const TextStyle(color: Colors.white, fontSize: 15)),
+                  Text(
+                    text,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         timeLabel,
-                        style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.65),
+                          fontSize: 11,
+                        ),
                       ),
                       if (showTicks) ...[
                         const SizedBox(width: 6),
@@ -580,7 +674,11 @@ class _EmptyChatHint extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.chat_bubble_outline, color: Colors.white70, size: 28),
+            const Icon(
+              Icons.chat_bubble_outline,
+              color: Colors.white70,
+              size: 28,
+            ),
             const SizedBox(height: 10),
             Text(
               "Schreibe $otherName eine Nachricht,\num den Chat zu starten.",
@@ -592,7 +690,10 @@ class _EmptyChatHint extends StatelessWidget {
               const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ),
             ],
           ],

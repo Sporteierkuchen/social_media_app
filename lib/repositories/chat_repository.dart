@@ -43,7 +43,25 @@ class ChatRepository {
     return _db.collection('chats').doc(chatId).get();
   }
 
+  Future<void> setActiveChat({
+    required String userId,
+    String? chatId,
+  }) async {
+    final userRef = _db.collection('users').doc(userId);
 
+    if (chatId == null || chatId.isEmpty) {
+      await userRef.set({
+        "activeChatId": FieldValue.delete(),
+        "activeChatUpdatedAt": FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return;
+    }
+
+    await userRef.set({
+      "activeChatId": chatId,
+      "activeChatUpdatedAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   String chatIdFor(String uid1, String uid2) {
     final pair = [uid1, uid2]..sort();

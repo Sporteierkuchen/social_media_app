@@ -17,6 +17,14 @@ class LocalNotificationService {
   static const String _defaultGroupKey = 'post_uploads_group';
   static const int _groupSummaryId = 999999;
 
+  static const String _chatGroupKey = 'all_chats_group';
+  static const int _chatSummaryId = 888888;
+
+  static final Map<String, int> _chatMessageCounts = {};
+  static final Map<String, String> _chatLastPayloads = {};
+  static final Map<String, String> _chatSenderNames = {};
+  static final Map<String, String> _chatLastBodies = {};
+
   static Future<void> init() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -200,4 +208,119 @@ class LocalNotificationService {
 
     return filePath;
   }
+
+  static int _chatNotificationId(String chatId) {
+    return chatId.hashCode & 0x7fffffff;
+  }
+
+  static Future<void> showChatNotification({
+    required String chatId,
+    required String senderName,
+    required String title,
+    required String body,
+    required String payload,
+  }) async {
+    _chatMessageCounts[chatId] = (_chatMessageCounts[chatId] ?? 0) + 1;
+    _chatLastPayloads[chatId] = payload;
+    _chatSenderNames[chatId] = senderName;
+    _chatLastBodies[chatId] = body;
+
+    final count = _chatMessageCounts[chatId] ?? 1;
+
+    final effectiveTitle = "💬 $senderName";
+    final effectiveBody = count > 1 ? "$count neue Nachrichten" : body;
+
+    final androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'Wichtige Benachrichtigungen',
+      channelDescription: 'Zeigt Push Benachrichtigungen im Vordergrund an',
+      importance: Importance.max,
+      priority: Priority.high,
+      groupKey: _chatGroupKey,
+      tag: 'chat_$chatId',
+    );
+
+    final details = NotificationDetails(android: androidDetails);
+
+    await _plugin.show(
+      _chatNotificationId(chatId),
+      effectiveTitle,
+      effectiveBody,
+      details,
+      payload: payload,
+    );
+
+    await _showChatSummary();
+  }
+
+  static Future<void> _showChatSummary() async {
+    if (_chatMessageCounts.isEmpty) {
+      await _plugin.cancel(_chatSummaryId);
+      return;
+    }
+
+    final totalChats = _chatMessageCounts.length;
+    final totalMessages = _chatMessageCounts.values.fold<int>(
+      0,
+          (sum, count) => sum + count,
+    );
+
+    if (totalChats == 1) {
+      await _plugin.cancel(_chatSummaryId);
+      return;
+    }
+
+    final lines = _chatMessageCounts.entries.map((entry) {
+      final senderName = _chatSenderNames[entry.key] ?? "Unbekannt";
+      final count = entry.value;
+      return count == 1
+          ? "1 Nachricht von $senderName"
+          : "$count Nachrichten von $senderName";
+    }).toList();
+
+    final summaryBody = "$totalMessages neue Nachrichten in $totalChats Chats";
+
+    final inboxStyle = InboxStyleInformation(
+      lines,
+      contentTitle: "💬 Neue Nachrichten",
+      summaryText: summaryBody,
+    );
+
+    final androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'Wichtige Benachrichtigungen',
+      channelDescription: 'Zeigt Push Benachrichtigungen im Vordergrund an',
+      importance: Importance.max,
+      priority: Priority.high,
+      groupKey: _chatGroupKey,
+      setAsGroupSummary: true,
+      styleInformation: inboxStyle,
+    );
+
+    final details = NotificationDetails(android: androidDetails);
+
+    await _plugin.show(
+      _chatSummaryId,
+      "💬 Neue Nachrichten",
+      summaryBody,
+      details,
+      payload: '{"action":"open_chat_list"}',
+    );
+  }
+
+  static Future<void> clearChatNotifications(String chatId) async {
+    _chatMessageCounts.remove(chatId);
+    _chatLastPayloads.remove(chatId);
+    _chatSenderNames.remove(chatId);
+    _chatLastBodies.remove(chatId);
+
+    await _plugin.cancel(_chatNotificationId(chatId));
+
+    if (_chatMessageCounts.isEmpty) {
+      await _plugin.cancel(_chatSummaryId);
+    } else {
+      await _showChatSummary();
+    }
+  }
+
 }

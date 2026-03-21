@@ -261,6 +261,18 @@ export const notifyReceiverOnNewMessage = onDocumentCreated(
 
       const db = admin.firestore();
 
+      const receiverSnap = await db.collection("users").doc(receiverId).get();
+      const receiverData = receiverSnap.data() ?? {};
+      const receiverActiveChatId =
+        (receiverData["activeChatId"] as string | undefined) ?? "";
+
+      if (receiverActiveChatId === chatId) {
+        console.log(
+          `Empfänger ${receiverId} hat Chat ${chatId} offen -> kein Push.`,
+        );
+        return;
+      }
+
       // Sender laden
       const senderSnap = await db.collection("users").doc(senderId).get();
       const senderData = senderSnap.data() ?? {};
@@ -307,6 +319,7 @@ export const notifyReceiverOnNewMessage = onDocumentCreated(
           priority: "high",
           notification: {
             channelId: "high_importance_channel",
+            tag: `chat_${chatId}`,
           },
         },
         data: {

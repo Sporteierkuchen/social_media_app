@@ -13,6 +13,7 @@ import '../pages/post/creator_posts_page.dart';
 import '../repositories/chat_repository.dart';
 import '../repositories/post_repository.dart';
 import '../repositories/user_repository.dart';
+import 'chat_state_service.dart';
 import 'local_notification_service.dart';
 import 'navigation_service.dart';
 
@@ -24,7 +25,15 @@ class PushService {
   final UserRepository _userRepository = UserRepository();
   final ChatRepository _chatRepository = ChatRepository();
 
+  static bool _initialized = false;
+
   Future<void> init() async {
+
+    if (_initialized) {
+      debugPrint("PushService bereits initialisiert.");
+      return;
+    }
+    _initialized = true;
 
     LocalNotificationService.onNotificationTap = (String payload) async {
       try {
@@ -69,33 +78,35 @@ class PushService {
       debugPrint("Foreground Text: ${message.notification?.body}");
       debugPrint("Foreground Daten: ${message.data}");
 
+      final action = message.data["action"];
       final title = message.notification?.title ?? "Neue Benachrichtigung";
       final body = message.notification?.body ?? "";
       final payload = jsonEncode(message.data);
 
-      final action = message.data["action"];
-
       if (action == "open_chat") {
-        final chatId = message.data["chatId"] ?? "unknown_chat";
-        final senderName = message.data["senderName"] ?? "Unbekannt";
+        final chatId = message.data["chatId"]?.toString() ?? "";
+        final senderName = message.data["senderName"]?.toString() ?? "Unbekannt";
 
-        await LocalNotificationService.showNotification(
+        if (chatId.isEmpty) {
+          return;
+        }
+
+        if (ChatStateService.currentOpenChatId == chatId) {
+          debugPrint("Chat $chatId ist offen -> keine lokale Notification.");
+          return;
+        }
+
+        await LocalNotificationService.showChatNotification(
+          chatId: chatId,
+          senderName: senderName,
           title: title,
           body: body,
           payload: payload,
-          groupKey: "chat_$chatId",
-          groupTitle: "Neue Nachrichten von $senderName",
-          summaryPayload: jsonEncode({
-            "action": "open_chat_group",
-            "chatId": chatId,
-          }),
-          postId: null,
         );
-
         return;
       }
 
-      // bestehende Post-Logik
+      // bestehende Post-Logik bleibt darunter
       final imageUrl = message.data["imageUrl"];
       final creatorId = message.data["creatorId"] ?? "unknown_creator";
       final type = (message.data["type"] ?? "post").toString().toLowerCase();
@@ -192,6 +203,11 @@ class PushService {
 
       if (action == "open_chat_group") {
         await _openChatGroup(message.data);
+        return;
+      }
+
+      if (action == "open_chat_list") {
+        await _openChatList();
         return;
       }
 
@@ -366,6 +382,8 @@ class PushService {
         return;
       }
 
+      await LocalNotificationService.clearChatNotifications(chatId.toString());
+
       Navigator.of(newContext).push(
         MaterialPageRoute(
           builder: (_) => ChatPage(
@@ -448,6 +466,8 @@ class PushService {
         return;
       }
 
+      await LocalNotificationService.clearChatNotifications(chatId.toString());
+
       Navigator.of(newContext).push(
         MaterialPageRoute(
           builder: (_) => ChatPage(
@@ -459,6 +479,25 @@ class PushService {
       );
     } catch (e) {
       debugPrint("Fehler bei Chat-Gruppen-Navigation: $e");
+    }
+  }
+
+  Future<void> _openChatList() async {
+    try {
+      final context = NavigationService.navigatorKey.currentContext;
+      if (context == null) {
+        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const BottomNavBar(index: 2),
+        ),
+            (route) => false,
+      );
+    } catch (e) {
+      debugPrint("Fehler beim Öffnen der Chat-Liste: $e");
     }
   }
 
