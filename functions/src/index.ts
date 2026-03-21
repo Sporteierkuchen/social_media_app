@@ -412,7 +412,7 @@ export const sendTestPushToAll = onRequest(async (req, res) => {
   const chunkSize = 500;
 
   const imageUrl =
-    "https://firebasestorage.googleapis.com/v0/b/egon-kowalski-db.appspot.com/o/Testbild%2FgwyifGmXWbMFI7KFTZLgJZpFlGd2.jpg?alt=media&token=b7244df0-6d04-4476-bfb5-4edc3445d9d4";
+    "https://firebasestorage.googleapis.com/v0/b/social-media-app-68600.firebasestorage.app/o/Testbild%2F49436b01-fc28-45c1-9725-2055237ae835.jpg?alt=media&token=e0187890-15fd-4af7-80ab-cca259af9cfc";
 
   for (let i = 0; i < uniqueTokens.length; i += chunkSize) {
     const chunk = uniqueTokens.slice(i, i + chunkSize);
