@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:egon_kowalski_app/models/PostDto.dart';
-import 'package:egon_kowalski_app/models/UserDto.dart';
-import 'package:egon_kowalski_app/repositories/post_repository.dart';
+import '../../models/PostDto.dart';
+import '../../models/UserDto.dart';
+import '../../repositories/post_repository.dart';
 import '../../widgets/PostWidget.dart';
 
 class CreatorPostsPage extends StatelessWidget {
