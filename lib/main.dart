@@ -4,7 +4,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:social_media_app/pages/authenticated_root.dart';
 import 'package:social_media_app/repositories/auth_repository.dart';
+import 'package:social_media_app/services/local_notification_service.dart';
 
 import 'constants/app_strings.dart';
 import 'theme/app_colors.dart';
