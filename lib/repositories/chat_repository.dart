@@ -39,7 +39,9 @@ class ChatRepository {
   }
 
 
-
+  Future<DocumentSnapshot<Map<String, dynamic>>> getChatById(String chatId) {
+    return _db.collection('chats').doc(chatId).get();
+  }
 
 
 

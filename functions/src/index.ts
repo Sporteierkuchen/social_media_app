@@ -230,6 +230,136 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
   }
 );
 
+export const notifyReceiverOnNewMessage = onDocumentCreated(
+  "chats/{chatId}/messages/{messageId}",
+  async (event) => {
+    try {
+      const snapshot = event.data;
+      if (!snapshot) {
+        console.log("Kein Message-Snapshot vorhanden.");
+        return;
+      }
+
+      const message = snapshot.data();
+      const chatId = event.params.chatId;
+      const messageId = snapshot.id;
+
+      const senderId = message.senderId as string | undefined;
+      const receiverId = message.receiverId as string | undefined;
+      const text = (message.text as string | undefined) ?? "";
+      const type = (message.type as string | undefined) ?? "text";
+
+      if (!senderId || !receiverId) {
+        console.log("senderId oder receiverId fehlt.");
+        return;
+      }
+
+      if (senderId === receiverId) {
+        console.log("Sender und Empfänger identisch, kein Push.");
+        return;
+      }
+
+      const db = admin.firestore();
+
+      // Sender laden
+      const senderSnap = await db.collection("users").doc(senderId).get();
+      const senderData = senderSnap.data() ?? {};
+
+      const senderUsername = (senderData["benutzername"] as string | undefined) ?? "User";
+      const senderVorname = (senderData["vorname"] as string | undefined) ?? "";
+      const senderNachname = (senderData["nachname"] as string | undefined) ?? "";
+
+      let fullName = `${senderVorname} ${senderNachname}`.trim();
+      if (fullName === "") {
+        fullName = senderUsername;
+      }
+
+      // Empfänger-Tokens laden
+      const tokenSnap = await db
+        .collection("users")
+        .doc(receiverId)
+        .collection("fcmTokens")
+        .get();
+
+      const tokens = tokenSnap.docs
+        .map((doc) => doc.data().token as string | undefined)
+        .filter((token): token is string => Boolean(token));
+
+      const uniqueTokens = [...new Set(tokens)];
+
+      if (uniqueTokens.length === 0) {
+        console.log("Keine Tokens für Empfänger gefunden.");
+        return;
+      }
+
+      let body = text;
+      if (type !== "text") {
+        body = "Hat dir eine Nachricht gesendet";
+      }
+
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: uniqueTokens,
+        notification: {
+          title: `💬 ${fullName}`,
+          body: body,
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "high_importance_channel",
+          },
+        },
+        data: {
+          action: "open_chat",
+          chatId: chatId,
+          messageId: messageId,
+          senderId: senderId,
+          receiverId: receiverId,
+          senderName: fullName,
+          senderUsername: senderUsername,
+          type: type,
+          text: text,
+        },
+      });
+
+      console.log("Chat-Push gesendet:", response.successCount);
+      console.log("Chat-Push Fehler:", response.failureCount);
+
+      // Ungültige Tokens löschen
+      const invalidTokens: string[] = [];
+
+      response.responses.forEach((resp, index) => {
+        if (!resp.success) {
+          const code = resp.error?.code ?? "unknown";
+          const msg = resp.error?.message ?? "Unbekannter Fehler";
+          console.log(`Fehler bei Token ${index}: code=${code}, message=${msg}`);
+
+          if (
+            code === "messaging/invalid-registration-token" ||
+            code === "messaging/registration-token-not-registered"
+          ) {
+            invalidTokens.push(uniqueTokens[index]);
+          }
+        }
+      });
+
+      for (const invalidToken of invalidTokens) {
+        await db
+          .collection("users")
+          .doc(receiverId)
+          .collection("fcmTokens")
+          .doc(invalidToken)
+          .delete()
+          .catch((err) => {
+            console.log("Fehler beim Löschen eines ungültigen Chat-Tokens:", err);
+          });
+      }
+    } catch (error) {
+      console.error("Fehler in notifyReceiverOnNewMessage:", error);
+    }
+  },
+);
+
 export const sendTestPushToAll = onRequest(async (req, res) => {
   const secret = req.query.secret;
 

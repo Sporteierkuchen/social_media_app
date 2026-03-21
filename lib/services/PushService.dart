@@ -7,8 +7,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../pages/BottomNavigationBar.dart';
+import '../pages/chat_page/chat/chat_page.dart';
 import '../pages/post/Post.dart';
 import '../pages/post/creator_posts_page.dart';
+import '../repositories/chat_repository.dart';
 import '../repositories/post_repository.dart';
 import '../repositories/user_repository.dart';
 import 'local_notification_service.dart';
@@ -20,6 +22,7 @@ class PushService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final PostRepository _postRepository = PostRepository();
   final UserRepository _userRepository = UserRepository();
+  final ChatRepository _chatRepository = ChatRepository();
 
   Future<void> init() async {
 
@@ -68,13 +71,36 @@ class PushService {
 
       final title = message.notification?.title ?? "Neue Benachrichtigung";
       final body = message.notification?.body ?? "";
-      final imageUrl = message.data["imageUrl"];
       final payload = jsonEncode(message.data);
 
-      final postId = message.data["postId"];
+      final action = message.data["action"];
+
+      if (action == "open_chat") {
+        final chatId = message.data["chatId"] ?? "unknown_chat";
+        final senderName = message.data["senderName"] ?? "Unbekannt";
+
+        await LocalNotificationService.showNotification(
+          title: title,
+          body: body,
+          payload: payload,
+          groupKey: "chat_$chatId",
+          groupTitle: "Neue Nachrichten von $senderName",
+          summaryPayload: jsonEncode({
+            "action": "open_chat_group",
+            "chatId": chatId,
+          }),
+          postId: null,
+        );
+
+        return;
+      }
+
+      // bestehende Post-Logik
+      final imageUrl = message.data["imageUrl"];
       final creatorId = message.data["creatorId"] ?? "unknown_creator";
       final type = (message.data["type"] ?? "post").toString().toLowerCase();
-      final creatorName = title.replaceFirst(RegExp(r'^[^\w]*Neues von '), '').trim();
+      final creatorName =
+      title.replaceFirst(RegExp(r'^[^\w]*Neues von '), '').trim();
 
       String groupKey = "creator_${creatorId}_post";
       String groupTitle = "Neue Uploads von $creatorName";
@@ -94,6 +120,8 @@ class PushService {
         "creatorName": creatorName,
       });
 
+      final postId = message.data["postId"];
+
       await LocalNotificationService.showNotification(
         title: title,
         body: body,
@@ -104,7 +132,6 @@ class PushService {
         summaryPayload: summaryPayload,
         postId: postId,
       );
-
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
@@ -157,6 +184,16 @@ class PushService {
   Future<void> _handleMessageNavigation(RemoteMessage message) async {
     try {
       final action = message.data["action"];
+
+      if (action == "open_chat") {
+        await _openChatFromPush(message.data);
+        return;
+      }
+
+      if (action == "open_chat_group") {
+        await _openChatGroup(message.data);
+        return;
+      }
 
       if (action == "open_creator_group") {
         await _openCreatorGroup(message.data);
@@ -281,6 +318,147 @@ class PushService {
       );
     } catch (e) {
       debugPrint("Fehler bei Gruppen-Navigation: $e");
+    }
+  }
+
+  Future<void> _openChatFromPush(Map<String, dynamic> data) async {
+    try {
+      final chatId = data["chatId"];
+      final senderId = data["senderId"];
+      final currentUser = _auth.currentUser;
+
+      if (chatId == null || senderId == null) {
+        debugPrint("chatId oder senderId fehlt in Chat-Push.");
+        return;
+      }
+
+      if (currentUser == null) {
+        debugPrint("Kein eingeloggter User vorhanden.");
+        return;
+      }
+
+      final me = await _userRepository.getUserDetailsDto(currentUser.uid);
+      final other = await _userRepository.getUserDetailsDto(senderId.toString());
+
+      if (me == null || other == null) {
+        debugPrint("Chat-Teilnehmer konnten nicht geladen werden.");
+        return;
+      }
+
+      final context = NavigationService.navigatorKey.currentContext;
+      if (context == null) {
+        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const BottomNavBar(index: 2),
+        ),
+            (route) => false,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final newContext = NavigationService.navigatorKey.currentContext;
+      if (newContext == null) {
+        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
+        return;
+      }
+
+      Navigator.of(newContext).push(
+        MaterialPageRoute(
+          builder: (_) => ChatPage(
+            chatId: chatId.toString(),
+            me: me,
+            other: other,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Fehler bei Chat-Push-Navigation: $e");
+    }
+  }
+
+  Future<void> _openChatGroup(Map<String, dynamic> data) async {
+    try {
+      final chatId = data["chatId"];
+      final currentUser = _auth.currentUser;
+
+      if (chatId == null || chatId.toString().isEmpty) {
+        debugPrint("Keine chatId für Chat-Gruppen-Navigation gefunden.");
+        return;
+      }
+
+      if (currentUser == null) {
+        debugPrint("Kein eingeloggter User vorhanden.");
+        return;
+      }
+
+      final me = await _userRepository.getUserDetailsDto(currentUser.uid);
+      if (me == null) {
+        debugPrint("Aktueller User konnte nicht geladen werden.");
+        return;
+      }
+
+      final chatSnap = await _chatRepository.getChatById(chatId.toString());
+      final chatData = chatSnap.data();
+
+      if (!chatSnap.exists || chatData == null) {
+        debugPrint("Chat konnte nicht geladen werden.");
+        return;
+      }
+
+      final participants = (chatData["participants"] as List?)?.cast<String>() ?? [];
+
+      final otherUid = participants.firstWhere(
+            (uid) => uid != currentUser.uid,
+        orElse: () => "",
+      );
+
+      if (otherUid.isEmpty) {
+        debugPrint("Kein anderer Teilnehmer im Chat gefunden.");
+        return;
+      }
+
+      final other = await _userRepository.getUserDetailsDto(otherUid);
+      if (other == null) {
+        debugPrint("Anderer Chat-Teilnehmer konnte nicht geladen werden.");
+        return;
+      }
+
+      final context = NavigationService.navigatorKey.currentContext;
+      if (context == null) {
+        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const BottomNavBar(index: 2),
+        ),
+            (route) => false,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final newContext = NavigationService.navigatorKey.currentContext;
+      if (newContext == null) {
+        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
+        return;
+      }
+
+      Navigator.of(newContext).push(
+        MaterialPageRoute(
+          builder: (_) => ChatPage(
+            chatId: chatId.toString(),
+            me: me,
+            other: other,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Fehler bei Chat-Gruppen-Navigation: $e");
     }
   }
 
