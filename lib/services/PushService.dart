@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../pages/BottomNavigationBar.dart';
 import '../pages/chat_page/chat/chat_page.dart';
 import '../pages/post/Post.dart';
@@ -28,7 +29,6 @@ class PushService {
   static bool _initialized = false;
 
   Future<void> init() async {
-
     if (_initialized) {
       debugPrint("PushService bereits initialisiert.");
       return;
@@ -43,7 +43,9 @@ class PushService {
         final message = RemoteMessage(data: data);
         await _handleMessageNavigation(message);
       } catch (e) {
-        debugPrint("Fehler beim Verarbeiten des Local Notification Payloads: $e");
+        debugPrint(
+          "Fehler beim Verarbeiten des Local Notification Payloads: $e",
+        );
       }
     };
 
@@ -85,7 +87,8 @@ class PushService {
 
       if (action == "open_chat") {
         final chatId = message.data["chatId"]?.toString() ?? "";
-        final senderName = message.data["senderName"]?.toString() ?? "Unbekannt";
+        final senderName =
+            message.data["senderName"]?.toString() ?? "Unbekannt";
 
         if (chatId.isEmpty) {
           return;
@@ -106,7 +109,6 @@ class PushService {
         return;
       }
 
-      // bestehende Post-Logik bleibt darunter
       final imageUrl = message.data["imageUrl"];
       final creatorId = message.data["creatorId"] ?? "unknown_creator";
       final type = (message.data["type"] ?? "post").toString().toLowerCase();
@@ -149,7 +151,6 @@ class PushService {
       debugPrint("Notification angeklickt: ${message.data}");
       await _handleMessageNavigation(message);
     });
-
   }
 
   Future<void> _saveToken(String token) async {
@@ -246,7 +247,7 @@ class PushService {
         MaterialPageRoute(
           builder: (_) => const BottomNavBar(index: 0),
         ),
-            (route) => false,
+            (route) => route.isFirst,
       );
 
       await Future.delayed(const Duration(milliseconds: 300));
@@ -292,7 +293,8 @@ class PushService {
           : <String>[];
 
       final currentUserRole = await _userRepository.getUserRole(currentUser.uid);
-      final creator = await _userRepository.getUserDetailsDto(creatorId.toString());
+      final creator =
+      await _userRepository.getUserDetailsDto(creatorId.toString());
 
       if (creator == null) {
         debugPrint("Creator konnte nicht geladen werden.");
@@ -309,7 +311,7 @@ class PushService {
         MaterialPageRoute(
           builder: (_) => const BottomNavBar(index: 0),
         ),
-            (route) => false,
+            (route) => route.isFirst,
       );
 
       await Future.delayed(const Duration(milliseconds: 300));
@@ -371,7 +373,7 @@ class PushService {
         MaterialPageRoute(
           builder: (_) => const BottomNavBar(index: 2),
         ),
-            (route) => false,
+            (route) => route.isFirst,
       );
 
       await Future.delayed(const Duration(milliseconds: 300));
@@ -427,7 +429,8 @@ class PushService {
         return;
       }
 
-      final participants = (chatData["participants"] as List?)?.cast<String>() ?? [];
+      final participants =
+          (chatData["participants"] as List?)?.cast<String>() ?? [];
 
       final otherUid = participants.firstWhere(
             (uid) => uid != currentUser.uid,
@@ -455,7 +458,7 @@ class PushService {
         MaterialPageRoute(
           builder: (_) => const BottomNavBar(index: 2),
         ),
-            (route) => false,
+            (route) => route.isFirst,
       );
 
       await Future.delayed(const Duration(milliseconds: 300));
@@ -494,11 +497,10 @@ class PushService {
         MaterialPageRoute(
           builder: (_) => const BottomNavBar(index: 2),
         ),
-            (route) => false,
+            (route) => route.isFirst,
       );
     } catch (e) {
       debugPrint("Fehler beim Öffnen der Chat-Liste: $e");
     }
   }
-
 }
