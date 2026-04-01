@@ -118,7 +118,7 @@ class _PostPageState extends State<PostPage> {
                           meldung: Meldung(
                             meldungsart: Meldungsart.WARNING,
                             text: "Du darfst keine Beiträge hochladen!",
-                          ), context: context,
+                          )
                         );
                         _handleWarning();
                       } else {
@@ -198,7 +198,7 @@ class _PostPageState extends State<PostPage> {
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Laden der Kategorien: $e",
-        ), context: context,
+        )
       );
     }
   }

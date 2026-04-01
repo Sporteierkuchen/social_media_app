@@ -211,7 +211,7 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
     if (uid == null || uid.isEmpty) {
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-        context: context,
+
       );
       return;
     }
@@ -233,7 +233,7 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Kommentar konnte nicht hinzugefügt werden:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

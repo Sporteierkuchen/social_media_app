@@ -158,7 +158,7 @@ class CommentWidgetState extends State<CommentWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abrufen des Like/Dislike-Status:\n$e",
         ),
-        context: context,
+
       );
     }
   }
@@ -195,7 +195,7 @@ class CommentWidgetState extends State<CommentWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Liken des Kommentars:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (mounted) {
@@ -238,7 +238,7 @@ class CommentWidgetState extends State<CommentWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Disliken des Kommentars:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (mounted) {
@@ -301,7 +301,7 @@ class CommentWidgetState extends State<CommentWidget> {
           meldungsart: Meldungsart.SUCCESS,
           text: "Kommentar erfolgreich gelöscht!",
         ),
-        context: context,
+
       );
       debugPrint(
         '[PostPage] Kommentar "${comment.content}" von ${comment.username} gelöscht.',
@@ -313,7 +313,7 @@ class CommentWidgetState extends State<CommentWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Löschen des Kommentars:\n$e",
         ),
-        context: context,
+
       );
     }
   }

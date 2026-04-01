@@ -163,14 +163,14 @@ class _CategoryOverviewSectionState extends State<CategoryOverviewSection> {
         meldung: Meldung(
           meldungsart: Meldungsart.SUCCESS,
           text: "Kategorie erfolgreich gelöscht!",
-        ), context: context,
+        )
       );
     } catch (e) {
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Löschen der Kategorie:\n$e",
-        ), context: context,
+        )
       );
     }
   }

@@ -63,30 +63,31 @@ class _LogoutButtonState extends State<LogoutButton> {
       await PushService().removeCurrentToken();
       await widget.authRepository.signOut();
 
+      await HelperUtil.getToast(
+        meldung: Meldung(
+          meldungsart: Meldungsart.SUCCESS,
+          text: "Erfolgreich ausgeloggt",
+        ),
+      );
+
       debugPrint("[LogoutButton] Logout done");
 
-      // WICHTIG:
-      // Alle zusätzlich geöffneten Seiten schließen,
-      // damit die Root-Route mit AuthGate sichtbar wird.
       final navigator = NavigationService.navigatorKey.currentState;
       navigator?.popUntil((route) => route.isFirst);
     } catch (e) {
       debugPrint("[LogoutButton] Logout error: $e");
 
-      if (!mounted) return;
-
-      HelperUtil.getToast(
+      await HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Ausloggen:\n$e",
         ),
-        context: context,
       );
 
       if (mounted) {
         setState(() => isLoading = false);
       }
-
     }
   }
+
 }

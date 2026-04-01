@@ -106,7 +106,7 @@ class _PostUploadScreenState extends State<PostUploadScreen> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Laden der Kategorien: ${e.toString()}",
         ),
-        context: context,
+
       );
     }
   }
@@ -200,7 +200,7 @@ class _PostUploadScreenState extends State<PostUploadScreen> {
     if (!_checkUserInput()) {
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.WARNING, text: errorMessage),
-        context: context,
+
       );
       return false;
     }
@@ -276,7 +276,7 @@ class _PostUploadScreenState extends State<PostUploadScreen> {
               ? "Das Video wurde erfolgreich hochgeladen!"
               : "Das Bild wurde erfolgreich hochgeladen!",
         ),
-        context: context,
+
       );
 
       return true;
@@ -287,7 +287,7 @@ class _PostUploadScreenState extends State<PostUploadScreen> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Upload: ${e.toString()}",
         ),
-        context: context,
+
       );
       return false;
     } finally {

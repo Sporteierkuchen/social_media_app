@@ -236,10 +236,7 @@ class _RecaptchaState extends State<Recaptcha> {
 
                       if (!isCorrect) {
                         _refresh();
-                        showWarning(
-                          context,
-                          "Die Captcha ist nicht korrekt!",
-                        );
+                        showWarning("Eingabe prüfen", "Die Captcha ist nicht korrekt!");
                       } else {
                         // korrekt – Eltern-Widget schließt Dialog
                       }

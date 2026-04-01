@@ -280,7 +280,7 @@ class _AboutMeSectionState extends State<AboutMeSection> {
             meldungsart: Meldungsart.SUCCESS,
             text: "Die Beschreibung wurde erfolgreich aktualisiert!",
           ),
-          context: context,
+
         );
 
         setState(() => beschreibungAendern = false);
@@ -290,7 +290,7 @@ class _AboutMeSectionState extends State<AboutMeSection> {
             meldungsart: Meldungsart.ERROR,
             text: "Beschreibung konnte nicht gespeichert werden.",
           ),
-          context: context,
+
         );
       }
     } catch (e) {
@@ -300,7 +300,7 @@ class _AboutMeSectionState extends State<AboutMeSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Speichern:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

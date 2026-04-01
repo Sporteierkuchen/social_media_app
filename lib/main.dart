@@ -1,5 +1,5 @@
 
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +43,7 @@ class MyApp extends StatelessWidget {
       title: AppStrings.appTitle,
       debugShowCheckedModeBanner: false,
       navigatorKey: NavigationService.navigatorKey,
+      scaffoldMessengerKey: NavigationService.scaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,

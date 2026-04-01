@@ -320,7 +320,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
               text:
               "Du hast ${owner?.vorname} ${owner?.nachname} deabboniert!",
             ),
-            context: context,
+
           );
         }
       } else {
@@ -354,7 +354,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
               text:
               "Du hast ${owner?.vorname} ${owner?.nachname} abboniert!",
             ),
-            context: context,
+
           );
         }
       }
@@ -364,7 +364,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abbonieren:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

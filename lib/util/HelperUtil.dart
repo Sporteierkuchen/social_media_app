@@ -26,7 +26,6 @@ class HelperUtil {
     return difference;
   }
 
-  /// Berechnung des Like-Prozentsatzes als String, z. B. "75.0%"
   static String calculateLikePercentage({
     required int likes,
     required int dislikes,
@@ -37,79 +36,86 @@ class HelperUtil {
     return '${likePercentage.toStringAsFixed(1)}%';
   }
 
-  /// "vor X Tagen/Monaten" aus Firestore-Timestamp (deutsch)
   static String getTimeAgo(Timestamp timestamp) {
     timeago.setLocaleMessages('de', timeago.DeMessages());
     final DateTime videoDate = timestamp.toDate();
     return timeago.format(videoDate, locale: 'de');
   }
 
-  static void getToast({
+  static Future<void> getToast({
     required Meldung meldung,
-    required BuildContext context,
-  }) {
+  }) async {
     switch (meldung.meldungsart) {
       case Meldungsart.SUCCESS:
-        showSuccess(context, meldung.text);
+        await showSuccess(
+          "Erfolgreich",
+          meldung.text,
+        );
         break;
+
       case Meldungsart.INFO:
-        showInfo(context, meldung.text);
+        await showInfo(
+          "Hinweis",
+          meldung.text,
+        );
         break;
+
       case Meldungsart.WARNING:
-        showWarning(context, meldung.text);
+        await showWarning(
+          "Eingabe prüfen",
+          meldung.text,
+        );
         break;
+
       case Meldungsart.ERROR:
-        showError(context, meldung.text);
+        await showError(
+          "Fehler",
+          meldung.text,
+        );
         break;
     }
   }
 
   static Widget getUserIcon(String role) {
-
-    if(role.isEmpty){
+    if (role.isEmpty) {
       return Container();
     }
-    switch(role) {
-      case "USER": {
+
+    switch (role) {
+      case "USER":
         return const Icon(
           Icons.person,
           color: Colors.grey,
           size: 15,
         );
-      }
-      case "ADMIN": {
+      case "ADMIN":
         return const Icon(
           Icons.check_circle,
           color: Colors.blue,
           size: 25,
         );
-      }
-      case "OWNER": {
+      case "OWNER":
         return const Icon(
           Icons.star,
           color: Colors.yellow,
           size: 25,
         );
-      }
-      case "RESTRICTED-USER": {
+      case "RESTRICTED-USER":
         return const Icon(
           Icons.warning,
           color: Colors.red,
           size: 20,
         );
-      }
-      case "MELKER": {
+      case "MELKER":
         return const Icon(
           Icons.delete,
           color: Colors.pinkAccent,
           size: 20,
         );
-      }
-      default: { return Container();}
+      default:
+        return Container();
     }
-
   }
-
 }
 
 enum PostMediaFilter { all, videos, images }

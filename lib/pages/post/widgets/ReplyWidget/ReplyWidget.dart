@@ -118,7 +118,7 @@ class ReplyWidgetState extends State<ReplyWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abrufen des Like/Dislike-Status:\n$e",
         ),
-        context: context,
+
       );
     }
   }
@@ -213,7 +213,7 @@ class ReplyWidgetState extends State<ReplyWidget> {
           meldungsart: Meldungsart.SUCCESS,
           text: "Antwort erfolgreich gelöscht!",
         ),
-        context: context,
+
       );
     } catch (e) {
       if (!mounted) return;
@@ -222,7 +222,7 @@ class ReplyWidgetState extends State<ReplyWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Löschen der Antwort:\n$e",
         ),
-        context: context,
+
       );
     }
   }

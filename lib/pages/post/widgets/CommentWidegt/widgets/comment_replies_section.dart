@@ -179,7 +179,7 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
       if (!mounted) return;
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-        context: context,
+
       );
       return;
     }
@@ -203,7 +203,7 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Antwort konnte nicht hinzugefügt werden:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

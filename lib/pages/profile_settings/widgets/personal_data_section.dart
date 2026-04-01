@@ -283,7 +283,7 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Vorname und Nachname dürfen nicht leer sein.",
         ),
-        context: context,
+
       );
       return false;
     }
@@ -301,7 +301,7 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler: Benutzer-ID fehlt.",
         ),
-        context: context,
+
       );
       return;
     }
@@ -331,7 +331,7 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
             meldungsart: Meldungsart.SUCCESS,
             text: "Die Daten wurden erfolgreich aktualisiert!",
           ),
-          context: context,
+
         );
         setState(() => isEditing = false);
       } else {
@@ -340,7 +340,7 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
             meldungsart: Meldungsart.ERROR,
             text: "Die Daten konnten nicht gespeichert werden.",
           ),
-          context: context,
+
         );
       }
     } catch (e) {
@@ -350,7 +350,7 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Speichern:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

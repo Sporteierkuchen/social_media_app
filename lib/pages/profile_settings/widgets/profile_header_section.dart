@@ -168,7 +168,7 @@ class _ProfileHeaderSectionState extends State<ProfileHeaderSection> {
             meldungsart: Meldungsart.INFO,
             text: "Abgebrochen – kein Bild ausgewählt.",
           ),
-          context: context,
+
         );
         return;
       }
@@ -184,7 +184,7 @@ class _ProfileHeaderSectionState extends State<ProfileHeaderSection> {
             meldungsart: Meldungsart.SUCCESS,
             text: "Profilbild erfolgreich aktualisiert!",
           ),
-          context: context,
+
         );
       } else {
         debugPrint("[ProfileHeaderSection] Upload fehlgeschlagen ❌ (repo returned false)");
@@ -193,7 +193,7 @@ class _ProfileHeaderSectionState extends State<ProfileHeaderSection> {
             meldungsart: Meldungsart.ERROR,
             text: "Fehler beim Hochladen des Profilbilds.",
           ),
-          context: context,
+
         );
       }
     } on PlatformException catch (e) {
@@ -203,7 +203,7 @@ class _ProfileHeaderSectionState extends State<ProfileHeaderSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Zugriff auf $srcName:\n$e",
         ),
-        context: context,
+
       );
     } catch (e) {
       debugPrint("[ProfileHeaderSection] Unerwarteter Fehler: $e");
@@ -212,7 +212,7 @@ class _ProfileHeaderSectionState extends State<ProfileHeaderSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Unerwarteter Fehler beim Upload:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

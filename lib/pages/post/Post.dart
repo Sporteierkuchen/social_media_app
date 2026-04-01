@@ -177,7 +177,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             meldungsart: Meldungsart.ERROR,
             text: "Für dieses Video ist keine URL vorhanden.",
           ),
-          context: context,
+
         );
         return;
       }
@@ -200,7 +200,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Initialisieren des Video-Players:\n$e",
         ),
-        context: context,
+
       );
     }
   }
@@ -227,7 +227,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Erhöhen der Aufrufzahl:\n$error",
         ),
-        context: context,
+
       );
     }
   }
@@ -256,7 +256,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abrufen des Like/Dislike-Status:\n$e",
         ),
-        context: context,
+
       );
     }
   }
@@ -293,7 +293,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Liken des Post:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (mounted) {
@@ -336,7 +336,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Disliken des Post:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (mounted) {

@@ -179,7 +179,7 @@ class UserInfoPageState extends State<UserInfoPage> {
           meldungsart: Meldungsart.ERROR,
           text:
           "Fehler beim Abrufen des aktuellen Benutzers:\n$e",
-        ), context: context,
+        ),
       );
     }
   }

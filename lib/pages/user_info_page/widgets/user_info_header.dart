@@ -321,7 +321,6 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
               text:
               "Du hast ${widget.userData.vorname} ${widget.userData.nachname} deabboniert!",
             ),
-            context: context,
           );
         }
       } else {
@@ -355,7 +354,6 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
               text:
               "Du hast ${widget.userData.vorname} ${widget.userData.nachname} abboniert!",
             ),
-            context: context,
           );
         }
       }
@@ -365,7 +363,6 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abbonieren:\n$e",
         ),
-        context: context,
       );
     } finally {
       if (!mounted) return;

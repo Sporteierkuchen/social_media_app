@@ -114,7 +114,7 @@ class SubscribedSection extends StatelessWidget {
                         meldungsart: art,
                         text: text,
                       ),
-                      context: parentContext, // <- nicht builder-context
+
                     );
                   },
                 );

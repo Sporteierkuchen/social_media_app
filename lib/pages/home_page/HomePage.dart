@@ -1,6 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'package:social_media_app/pages/home_page/widgets/best_bilder_section.dart';
+
 import '../../models/PostDto.dart';
 import '../../models/UserDto.dart';
 import '../../repositories/auth_repository.dart';
@@ -9,7 +9,6 @@ import '../../repositories/post_repository.dart';
 import 'widgets/home_hero_section.dart';
 import 'widgets/Info_block.dart';
 import 'widgets/best_videos_section.dart';
-
 
 class HomePage extends StatefulWidget {
   final double contentHeight; // sichtbare Höhe (ohne BottomNavBar)
@@ -24,7 +23,6 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
-
   String? userID; // aktuell eingeloggter User (oder null)
 
   final PostRepository _postRepository = PostRepository();
@@ -39,7 +37,6 @@ class HomePageState extends State<HomePage> {
     // Aktuellen User holen (falls nicht eingeloggt => null)
     userID = _authRepository.currentUserId;
     debugPrint("[HomePage] currentUserId = $userID");
-
   }
 
   @override
@@ -66,10 +63,12 @@ class HomePageState extends State<HomePage> {
     return StreamBuilder<UserDto?>(
       stream: _userRepository.userStream(userID!),
       builder: (context, snapshot) {
-        debugPrint("[HomePage] StreamBuilder<UserDto?> build: "
-            "connectionState=${snapshot.connectionState}, "
-            "hasError=${snapshot.hasError}, "
-            "hasData=${snapshot.hasData}");
+        debugPrint(
+          "[HomePage] StreamBuilder<UserDto?> build: "
+              "connectionState=${snapshot.connectionState}, "
+              "hasError=${snapshot.hasError}, "
+              "hasData=${snapshot.hasData}",
+        );
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           debugPrint("[HomePage] User-Stream wartet noch...");
@@ -110,7 +109,8 @@ class HomePageState extends State<HomePage> {
                 StreamBuilder<List<PostDto>>(
                   stream: _postRepository.bestImagesPostsStream(limit: 4),
                   builder: (context, snap) {
-                    final loading = snap.connectionState == ConnectionState.waiting;
+                    final loading =
+                        snap.connectionState == ConnectionState.waiting;
                     final posts = snap.data ?? [];
 
                     if (snap.hasError) {
@@ -131,7 +131,8 @@ class HomePageState extends State<HomePage> {
                 StreamBuilder<List<PostDto>>(
                   stream: _postRepository.bestVideosPostsStream(limit: 4),
                   builder: (context, snap) {
-                    final loading = snap.connectionState == ConnectionState.waiting;
+                    final loading =
+                        snap.connectionState == ConnectionState.waiting;
                     final posts = snap.data ?? [];
 
                     if (snap.hasError) {
@@ -188,5 +189,4 @@ class HomePageState extends State<HomePage> {
       },
     );
   }
-
 }

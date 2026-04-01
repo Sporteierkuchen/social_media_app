@@ -93,14 +93,14 @@ class _AddCategorySectionState extends State<AddCategorySection> {
         meldung: Meldung(
           meldungsart: Meldungsart.SUCCESS,
           text: "Kategorie erfolgreich hinzugefügt!",
-        ), context: context,
+        )
       );
     } catch (e) {
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Hinzufügen der Kategorie:\n$e",
-        ), context: context,
+        )
       );
     }
   }

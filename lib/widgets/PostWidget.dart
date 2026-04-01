@@ -258,7 +258,7 @@ class PostWidgetState extends State<PostWidget> {
               ? 'Der Post "${post.title}" wurde gelöscht!'
               : 'Fehler beim Löschen des Posts "${post.title}"!',
         ),
-        context: context,
+
       );
     } catch (e) {
       if (!mounted) return;
@@ -268,7 +268,7 @@ class PostWidgetState extends State<PostWidget> {
           meldungsart: Meldungsart.ERROR,
           text: 'Unerwarteter Fehler beim Löschen:\n$e',
         ),
-        context: context,
+
       );
     }
   }

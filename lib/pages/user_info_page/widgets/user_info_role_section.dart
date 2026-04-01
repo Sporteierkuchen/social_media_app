@@ -122,7 +122,7 @@ class _UserInfoRoleSectionState extends State<UserInfoRoleSection> {
         meldung: Meldung(
           meldungsart: Meldungsart.SUCCESS,
           text: "Benutzerrolle erfolgreich geändert!",
-        ), context: context,
+        ),
       );
     } catch (e) {
       print("Fehler beim Ändern der Benutzerrolle: $e");
@@ -130,7 +130,7 @@ class _UserInfoRoleSectionState extends State<UserInfoRoleSection> {
         meldung: Meldung(
           meldungsart: Meldungsart.WARNING,
           text: "Fehler beim Ändern der Benutzerrolle:\n$e",
-        ), context: context,
+        ),
       );
     } finally {
       if (!mounted) return;

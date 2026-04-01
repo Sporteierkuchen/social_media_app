@@ -225,7 +225,7 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Bitte gib dein neues Passwort ein und wiederhole es.",
         ),
-        context: context,
+
       );
       return false;
     }
@@ -236,7 +236,7 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Das Passwort muss mindestens 6 Zeichen lang sein.",
         ),
-        context: context,
+
       );
       return false;
     }
@@ -247,7 +247,7 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Die Passwörter stimmen nicht überein.",
         ),
-        context: context,
+
       );
       return false;
     }
@@ -300,7 +300,7 @@ class _PasswordSectionState extends State<PasswordSection> {
     if (user == null) {
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-        context: context,
+
       );
       return;
     }
@@ -337,7 +337,7 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.SUCCESS,
           text: "Passwort wurde geändert!",
         ),
-        context: context,
+
       );
 
       setState(() => isEditing = false);
@@ -345,7 +345,7 @@ class _PasswordSectionState extends State<PasswordSection> {
       if (!mounted) return;
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.ERROR, text: e.toString()),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

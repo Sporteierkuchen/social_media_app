@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/Meldung.dart';
 import '../repositories/auth_repository.dart';
-import '../services/PushService.dart';
 import '../util/HelperUtil.dart';
 import '../widgets/TextInput.dart';
 import '../widgets/Captcha/Captcha_tile.dart';
@@ -272,9 +271,11 @@ class LoginPageState extends State<LoginPage> {
     if (checkUserInput()) {
       await _login();
     } else {
-      HelperUtil.getToast(
-        meldung: Meldung(meldungsart: Meldungsart.WARNING, text: errorMessage),
-        context: context,
+      await HelperUtil.getToast(
+        meldung: Meldung(
+          meldungsart: Meldungsart.WARNING,
+          text: errorMessage,
+        ),
       );
       _handleWarning();
     }
@@ -293,16 +294,12 @@ class LoginPageState extends State<LoginPage> {
       password: passwordController.text,
     );
 
-    if (!mounted) return;
+    await HelperUtil.getToast(meldung: meldung);
 
     if (meldung.meldungsart == Meldungsart.SUCCESS) {
       debugPrint("Login erfolgreich!");
     } else {
       debugPrint("Login fehlgeschlagen: ${meldung.text}");
-      HelperUtil.getToast(
-        meldung: meldung,
-        context: context,
-      );
     }
   }
 

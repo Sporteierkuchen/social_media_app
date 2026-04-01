@@ -261,7 +261,7 @@ class AbbonentWidgetState extends State<AbbonentWidget> {
               text:
               "Du hast ${widget.abbonent.subscriberVorname} ${widget.abbonent.subscriberNachname} deabboniert!",
             ),
-            context: context,
+
           );
         }
       } else {
@@ -295,7 +295,7 @@ class AbbonentWidgetState extends State<AbbonentWidget> {
               text:
               "Du hast ${widget.abbonent.subscriberVorname} ${widget.abbonent.subscriberNachname} abboniert!",
             ),
-            context: context,
+
           );
         }
       }
@@ -305,7 +305,7 @@ class AbbonentWidgetState extends State<AbbonentWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abbonieren:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

@@ -286,7 +286,6 @@ class _EmailSectionState extends State<EmailSection> {
         meldung: Meldung(
             meldungsart: Meldungsart.WARNING,
             text: "Bitte gib eine gültige E-Mail-Adresse ein."),
-        context: context,
       );
       return false;
     }
@@ -339,7 +338,6 @@ class _EmailSectionState extends State<EmailSection> {
       HelperUtil.getToast(
         meldung:
         Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-        context: context,
       );
       return;
     }
@@ -370,7 +368,7 @@ class _EmailSectionState extends State<EmailSection> {
           text:
           "E-Mail zur Verifizierung an $newEmail gesendet. Nach Bestätigung wird die Adresse geändert.",
         ),
-        context: context,
+
       );
 
       _fillControllerFromUser();
@@ -379,7 +377,7 @@ class _EmailSectionState extends State<EmailSection> {
       if (!mounted) return;
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.ERROR, text: e.toString()),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;
@@ -399,7 +397,7 @@ class _EmailSectionState extends State<EmailSection> {
         HelperUtil.getToast(
           meldung:
           Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-          context: context,
+
         );
         return;
       }
@@ -422,7 +420,7 @@ class _EmailSectionState extends State<EmailSection> {
               meldungsart: Meldungsart.SUCCESS,
               text: "E-Mail wurde übernommen und im Profil aktualisiert!",
             ),
-            context: context,
+
           );
         } else {
           HelperUtil.getToast(
@@ -430,7 +428,7 @@ class _EmailSectionState extends State<EmailSection> {
               meldungsart: Meldungsart.WARNING,
               text: "E-Mail geändert, aber Profil-Daten konnten nicht aktualisiert werden.",
             ),
-            context: context,
+
           );
         }
       }
@@ -442,7 +440,7 @@ class _EmailSectionState extends State<EmailSection> {
             meldungsart: Meldungsart.INFO,
             text: "Verifizierungs-E-Mail wurde an ${user.email} gesendet.",
           ),
-          context: context,
+
         );
       } else {
         HelperUtil.getToast(
@@ -450,7 +448,7 @@ class _EmailSectionState extends State<EmailSection> {
             meldungsart: Meldungsart.SUCCESS,
             text: "E-Mail ist bereits verifiziert!",
           ),
-          context: context,
+
         );
       }
 
@@ -460,7 +458,7 @@ class _EmailSectionState extends State<EmailSection> {
       if (!mounted) return;
       HelperUtil.getToast(
         meldung: Meldung(meldungsart: Meldungsart.ERROR, text: e.toString()),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;

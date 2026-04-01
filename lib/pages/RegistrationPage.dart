@@ -359,7 +359,7 @@ class RegistrationpageState extends State<RegistrationPage> {
           meldungsart: Meldungsart.WARNING,
           text: errorMessage,
         ),
-        context: context,
+
       );
       _handleWarning();
     }
@@ -383,7 +383,7 @@ class RegistrationpageState extends State<RegistrationPage> {
 
     if (!mounted) return;
 
-    HelperUtil.getToast(meldung: meldung, context: context);
+    await HelperUtil.getToast(meldung: meldung);
 
     if (meldung.meldungsart == Meldungsart.SUCCESS) {
       Navigator.pop(context);

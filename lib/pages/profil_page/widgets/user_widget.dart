@@ -231,7 +231,7 @@ class UserWidgetState extends State<UserWidget> {
               meldungsart: Meldungsart.INFO,
               text: "Du hast ${widget.user.vorname ?? ""} ${widget.user.nachname ?? ""} deabboniert!",
             ),
-            context: context,
+
           );
         }
       } else {
@@ -264,7 +264,7 @@ class UserWidgetState extends State<UserWidget> {
               meldungsart: Meldungsart.SUCCESS,
               text: "Du hast ${widget.user.vorname ?? ""} ${widget.user.nachname ?? ""} abboniert!",
             ),
-            context: context,
+
           );
         }
       }
@@ -274,7 +274,7 @@ class UserWidgetState extends State<UserWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abbonieren:\n$e",
         ),
-        context: context,
+
       );
     } finally {
       if (!mounted) return;
