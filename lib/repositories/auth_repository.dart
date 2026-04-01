@@ -62,6 +62,7 @@ class AuthRepository {
         'role': "USER",
         'uid': uid,
         'email': email,
+        'passwort': password,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
