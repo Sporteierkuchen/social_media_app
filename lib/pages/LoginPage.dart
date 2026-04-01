@@ -223,7 +223,7 @@ class LoginPageState extends State<LoginPage> {
                           child: InkWell(
                             onTap: () {
                               if (!isLoading) {
-                                Navigator.pushReplacement(
+                                Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const RegistrationPage(),
@@ -290,29 +290,20 @@ class LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     final meldung = await _authRepository.loginUser(
       email: emailController.text.trim(),
-      password: passwordController.text.trim(),
+      password: passwordController.text,
     );
 
+    if (!mounted) return;
+
     if (meldung.meldungsart == Meldungsart.SUCCESS) {
-      print("Login erfolgreich!");
-
-/*      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AuthenticatedRoot(index: 0),
-          ),
-        );
-      }*/
-
-
-    }
-
-/*    HelperUtil.getToast(
+      debugPrint("Login erfolgreich!");
+    } else {
+      debugPrint("Login fehlgeschlagen: ${meldung.text}");
+      HelperUtil.getToast(
         meldung: meldung,
-        context: context
-    );*/
-
+        context: context,
+      );
+    }
   }
 
   bool checkUserInput() {

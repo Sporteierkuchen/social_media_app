@@ -4,14 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:social_media_app/pages/authenticated_root.dart';
-import 'package:social_media_app/repositories/auth_repository.dart';
 import 'package:social_media_app/services/local_notification_service.dart';
 import 'package:social_media_app/services/navigation_service.dart';
-
+import 'auth_gate.dart';
 import 'constants/app_strings.dart';
 import 'theme/app_colors.dart';
-import 'pages/LoginPage.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -32,13 +29,11 @@ Future<void> main() async {
   await LocalNotificationService.init();
 
   debugPrint("[Main] Firebase initialisiert, starte App...");
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key});
-
-  final AuthRepository _authRepository = AuthRepository();
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -56,37 +51,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.background,
         useMaterial3: true,
       ),
-      home: StreamBuilder<User?>(
-        stream: _authRepository.authStateChanges,
-        builder: (context, snapshot) {
-          // Nur loggen, wenn sich der Status wirklich ändert / relevant ist
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            debugPrint("[MyApp] Auth-State: WAITING");
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          if (snapshot.hasError) {
-            debugPrint("[MyApp] Auth-State: ERROR -> ${snapshot.error}");
-            return const Scaffold(
-              body: Center(child: Text("Fehler beim Laden der App.")),
-            );
-          }
-
-          if (snapshot.hasData) {
-            debugPrint(
-              "[MyApp] Auth-State: LOGGED IN -> uid=${snapshot.data!.uid}",
-            );
-            return const AuthenticatedRoot(index: 0);
-          } else {
-            debugPrint("[MyApp] Auth-State: LOGGED OUT -> LoginPage");
-            return const LoginPage();
-          }
-        },
-      ),
-      // Wenn du später SplashScreen nutzen willst:
-      // home: const SplashScreen(),
+      home: const AuthGate(),
     );
   }
 }

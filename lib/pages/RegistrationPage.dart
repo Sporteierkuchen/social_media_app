@@ -298,12 +298,7 @@ class RegistrationpageState extends State<RegistrationPage> {
                             ),
                             onTap: () {
                               if (!isLoading) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const LoginPage(),
-                                  ),
-                                );
+                                Navigator.pop(context);
                               }
                             },
                           ),
@@ -386,18 +381,13 @@ class RegistrationpageState extends State<RegistrationPage> {
       nachname: lastnameController.text.trim(),
     );
 
-    if (meldung.meldungsart == Meldungsart.SUCCESS) {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const LoginPage(),
-          ),
-        );
-      }
-    }
+    if (!mounted) return;
 
     HelperUtil.getToast(meldung: meldung, context: context);
+
+    if (meldung.meldungsart == Meldungsart.SUCCESS) {
+      Navigator.pop(context);
+    }
   }
 
   // ---------------------------------------------------------------------------
