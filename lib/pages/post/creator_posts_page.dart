@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../../models/PostDto.dart';
 import '../../models/UserDto.dart';
 import '../../repositories/post_repository.dart';
+import '../../services/content_state_service.dart';
 import '../../widgets/PostWidget.dart';
 
-class CreatorPostsPage extends StatelessWidget {
+class CreatorPostsPage extends StatefulWidget {
+  static const String routeName = "creator_posts";
+
   final String creatorId;
   final String currentUserId;
   final String currentUserRole;
@@ -12,7 +15,7 @@ class CreatorPostsPage extends StatelessWidget {
   final List<String> postIds;
   final UserDto creator;
 
-  CreatorPostsPage({
+  const CreatorPostsPage({
     super.key,
     required this.creatorId,
     required this.currentUserId,
@@ -22,7 +25,26 @@ class CreatorPostsPage extends StatelessWidget {
     this.type,
   });
 
+  @override
+  State<CreatorPostsPage> createState() => _CreatorPostsPageState();
+}
+
+class _CreatorPostsPageState extends State<CreatorPostsPage> {
   final PostRepository _postRepository = PostRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    ContentStateService.currentOpenCreatorId = widget.creatorId;
+  }
+
+  @override
+  void dispose() {
+    if (ContentStateService.currentOpenCreatorId == widget.creatorId) {
+      ContentStateService.currentOpenCreatorId = null;
+    }
+    super.dispose();
+  }
 
   Widget _buildCreatorHeader(UserDto creator, int postCount) {
     final fullName = "${creator.vorname} ${creator.nachname}".trim();
@@ -51,9 +73,7 @@ class CreatorPostsPage extends StatelessWidget {
                 ? const Icon(Icons.person, color: Colors.white, size: 30)
                 : null,
           ),
-
           const SizedBox(width: 14),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,9 +88,7 @@ class CreatorPostsPage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 4),
-
                 Text(
                   "@${creator.benutzername}",
                   style: TextStyle(
@@ -78,15 +96,15 @@ class CreatorPostsPage extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
                 Row(
                   children: [
                     if (creator.role!.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
                           color: Colors.orange,
@@ -101,7 +119,6 @@ class CreatorPostsPage extends StatelessWidget {
                           ),
                         ),
                       ),
-
                     Text(
                       "$postCount neue Beiträge",
                       style: TextStyle(
@@ -119,16 +136,13 @@ class CreatorPostsPage extends StatelessWidget {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     String pageTitle = "Neue Uploads";
 
-    final fullName = "${creator.vorname} ${creator.nachname}".trim();
-
-    if (type == "image" || type == "bild") {
+    if (widget.type == "image" || widget.type == "bild") {
       pageTitle = "📸 Neue Bilder";
-    } else if (type == "video") {
+    } else if (widget.type == "video") {
       pageTitle = "🎬 Neue Videos";
     }
 
@@ -144,7 +158,7 @@ class CreatorPostsPage extends StatelessWidget {
         ),
       ),
       body: FutureBuilder<List<PostDto>>(
-        future: _postRepository.getPostsByIds(postIds),
+        future: _postRepository.getPostsByIds(widget.postIds),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
@@ -174,9 +188,7 @@ class CreatorPostsPage extends StatelessWidget {
 
           return Column(
             children: [
-
-              _buildCreatorHeader(creator, posts.length),
-
+              _buildCreatorHeader(widget.creator, posts.length),
               Expanded(
                 child: ListView.builder(
                   itemCount: posts.length,
@@ -185,8 +197,8 @@ class CreatorPostsPage extends StatelessWidget {
 
                     return PostWidget(
                       post: post,
-                      userId: currentUserId,
-                      userRole: currentUserRole,
+                      userId: widget.currentUserId,
+                      userRole: widget.currentUserRole,
                       postRepository: _postRepository,
                     );
                   },
@@ -196,7 +208,6 @@ class CreatorPostsPage extends StatelessWidget {
           );
         },
       ),
-
     );
   }
 }

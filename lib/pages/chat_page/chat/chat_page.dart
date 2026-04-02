@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../../../models/UserDto.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../repositories/chat_repository.dart';
@@ -11,7 +12,10 @@ import '../../../services/local_notification_service.dart';
 import '../../user_info_page/UserInfoPage.dart';
 
 class ChatPage extends StatefulWidget {
-  final String? chatId; // optional
+
+  static const String routeName = "chat_page"; // 👈 NEU
+
+  final String? chatId;
   final UserDto me;
   final UserDto other;
 
@@ -44,9 +48,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     _chatId = widget.chatId;
 
-    if (_chatId != null) {
-      _scheduleMarkRead();
+    if (_chatId != null && _chatId!.isNotEmpty) {
       _setActiveChat();
+      _scheduleMarkRead();
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await LocalNotificationService.clearChatNotifications(_chatId!);
@@ -58,7 +62,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _markReadDebounce?.cancel();
+
     _clearActiveChat();
+
     _textCtrl.dispose();
     super.dispose();
   }
@@ -84,10 +90,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     ChatStateService.currentOpenChatId = cid;
 
-    await _chatRepo.setActiveChat(
-      userId: uid,
-      chatId: cid,
-    );
+    try {
+      await _chatRepo.setActiveChat(
+        userId: uid,
+        chatId: cid,
+      );
+    } catch (e) {
+      debugPrint("Fehler beim Setzen des ActiveChats: $e");
+    }
   }
 
   Future<void> _clearActiveChat() async {
@@ -96,14 +106,19 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     if (uid == null) return;
 
-    if (cid != null && ChatStateService.currentOpenChatId == cid) {
+    if (cid != null &&
+        ChatStateService.currentOpenChatId == cid) {
       ChatStateService.currentOpenChatId = null;
     }
 
-    await _chatRepo.setActiveChat(
-      userId: uid,
-      chatId: null,
-    );
+    try {
+      await _chatRepo.setActiveChat(
+        userId: uid,
+        chatId: null,
+      );
+    } catch (e) {
+      debugPrint("Fehler beim ClearActiveChat: $e");
+    }
   }
 
   void _scheduleMarkRead() {
@@ -131,7 +146,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     _textCtrl.clear();
 
-    // Chat erst beim ersten Senden anlegen
     if (_chatId == null) {
       if (_creatingChat) return;
       _creatingChat = true;
@@ -147,8 +161,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
       if (!mounted) return;
 
-      await _setActiveChat();
-      await LocalNotificationService.clearChatNotifications(_chatId!);
+      if (_chatId != null) {
+        ChatStateService.currentOpenChatId = _chatId;
+        await _setActiveChat();
+        await LocalNotificationService.clearChatNotifications(_chatId!);
+      }
 
       setState(() {});
     }
@@ -266,8 +283,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         backgroundImage:
                         otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
                         child: otherPic.isEmpty
-                            ? const Icon(Icons.person,
-                            color: Colors.white, size: 18)
+                            ? const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 18,
+                        )
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -374,7 +394,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         final isMe =
                             data["senderId"] == widget.me.userid;
                         final text = (data["text"] ?? "").toString();
-                        final createdAt = data["createdAt"] as Timestamp?;
+                        final createdAt =
+                        data["createdAt"] as Timestamp?;
 
                         final thisDay = _dateOnlyFromTs(createdAt);
 
@@ -478,6 +499,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
 class _DayHeader extends StatelessWidget {
   final String label;
+
   const _DayHeader({required this.label});
 
   @override
@@ -503,10 +525,8 @@ class _ChatBubble extends StatelessWidget {
   final bool isMe;
   final String text;
   final String timeLabel;
-
   final String otherName;
   final String otherPic;
-
   final bool showTicks;
   final bool delivered;
   final bool read;
@@ -572,8 +592,11 @@ class _ChatBubble extends StatelessWidget {
                       backgroundImage:
                       otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
                       child: otherPic.isEmpty
-                          ? const Icon(Icons.person,
-                          color: Colors.white, size: 14)
+                          ? const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 14,
+                      )
                           : null,
                     ),
                     const SizedBox(width: 8),
@@ -595,9 +618,8 @@ class _ChatBubble extends StatelessWidget {
               ),
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
               child: Column(
-                crossAxisAlignment: isMe
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
+                crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   Text(
                     text,
@@ -634,7 +656,10 @@ class _SendButton extends StatelessWidget {
   final bool enabled;
   final VoidCallback onPressed;
 
-  const _SendButton({required this.enabled, required this.onPressed});
+  const _SendButton({
+    required this.enabled,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -658,7 +683,10 @@ class _EmptyChatHint extends StatelessWidget {
   final String otherName;
   final bool creating;
 
-  const _EmptyChatHint({required this.otherName, required this.creating});
+  const _EmptyChatHint({
+    required this.otherName,
+    required this.creating,
+  });
 
   @override
   Widget build(BuildContext context) {

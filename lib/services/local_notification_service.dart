@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -65,10 +66,11 @@ class LocalNotificationService {
     String? summaryPayload,
     String? postId,
   }) async {
-
     final String effectiveGroupKey = groupKey ?? _defaultGroupKey;
     final String effectiveGroupTitle = groupTitle ?? 'Neue Uploads';
-    final int notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    final int notificationId =
+    DateTime.now().microsecondsSinceEpoch.remainder(2147483647);
 
     if (postId != null && postId.isNotEmpty) {
       final existing = _groupPostIds[effectiveGroupKey] ?? [];
@@ -128,7 +130,7 @@ class LocalNotificationService {
         );
         return;
       } catch (e) {
-        print("Fehler beim Laden des Bildes für Notification: $e");
+        debugPrint("Fehler beim Laden des Bildes für Notification: $e");
       }
     }
 
@@ -182,7 +184,9 @@ class LocalNotificationService {
         final data = Map<String, dynamic>.from(jsonDecode(summaryPayload));
         data["postIds"] = _groupPostIds[groupKey] ?? [];
         summaryPayload = jsonEncode(data);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint("Fehler beim Erstellen des Summary-Payloads: $e");
+      }
     }
 
     await _plugin.show(

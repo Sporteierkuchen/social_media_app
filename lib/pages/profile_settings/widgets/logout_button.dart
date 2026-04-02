@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/Meldung.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../services/PushService.dart';
+import '../../../services/app_shell_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../util/HelperUtil.dart';
 
@@ -62,6 +63,7 @@ class _LogoutButtonState extends State<LogoutButton> {
 
       await PushService().removeCurrentToken();
       await widget.authRepository.signOut();
+      AppShellService.reset();
 
       await HelperUtil.getToast(
         meldung: Meldung(

@@ -7,14 +7,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../pages/BottomNavigationBar.dart';
 import '../pages/chat_page/chat/chat_page.dart';
 import '../pages/post/Post.dart';
 import '../pages/post/creator_posts_page.dart';
 import '../repositories/chat_repository.dart';
 import '../repositories/post_repository.dart';
 import '../repositories/user_repository.dart';
+import 'app_shell_service.dart';
 import 'chat_state_service.dart';
+import 'content_state_service.dart';
 import 'local_notification_service.dart';
 import 'navigation_service.dart';
 
@@ -27,6 +28,7 @@ class PushService {
   final ChatRepository _chatRepository = ChatRepository();
 
   static bool _initialized = false;
+  static bool _isNavigating = false;
 
   Future<void> init() async {
     if (_initialized) {
@@ -36,6 +38,7 @@ class PushService {
     _initialized = true;
 
     LocalNotificationService.onNotificationTap = (String payload) async {
+      debugPrint("NotificationTap Payload: $payload");
       try {
         final Map<String, dynamic> data =
         Map<String, dynamic>.from(jsonDecode(payload));
@@ -43,9 +46,7 @@ class PushService {
         final message = RemoteMessage(data: data);
         await _handleMessageNavigation(message);
       } catch (e) {
-        debugPrint(
-          "Fehler beim Verarbeiten des Local Notification Payloads: $e",
-        );
+        debugPrint("Fehler beim Verarbeiten des Local Notification Payloads: $e");
       }
     };
 
@@ -90,9 +91,7 @@ class PushService {
         final senderName =
             message.data["senderName"]?.toString() ?? "Unbekannt";
 
-        if (chatId.isEmpty) {
-          return;
-        }
+        if (chatId.isEmpty) return;
 
         if (ChatStateService.currentOpenChatId == chatId) {
           debugPrint("Chat $chatId ist offen -> keine lokale Notification.");
@@ -193,82 +192,117 @@ class PushService {
     });
   }
 
-  Future<void> _handleMessageNavigation(RemoteMessage message) async {
-    try {
-      final action = message.data["action"];
-
-      if (action == "open_chat") {
-        await _openChatFromPush(message.data);
-        return;
-      }
-
-      if (action == "open_chat_group") {
-        await _openChatGroup(message.data);
-        return;
-      }
-
-      if (action == "open_chat_list") {
-        await _openChatList();
-        return;
-      }
-
-      if (action == "open_creator_group") {
-        await _openCreatorGroup(message.data);
-        return;
-      }
-
-      final postId = message.data["postId"];
-      final currentUser = _auth.currentUser;
-
-      if (postId == null || postId.toString().isEmpty) {
-        debugPrint("Keine postId in der Push-Nachricht gefunden.");
-        return;
-      }
-
-      if (currentUser == null) {
-        debugPrint("Kein eingeloggter User vorhanden.");
-        return;
-      }
-
-      final post = await _postRepository.getPostById(postId.toString());
-
-      if (post == null) {
-        debugPrint("Post mit ID $postId konnte nicht geladen werden.");
-        return;
-      }
-
-      final context = NavigationService.navigatorKey.currentContext;
-      if (context == null) {
-        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
-        return;
-      }
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const BottomNavBar(index: 0),
-        ),
-            (route) => route.isFirst,
-      );
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final newContext = NavigationService.navigatorKey.currentContext;
-      if (newContext == null) {
-        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
-        return;
-      }
-
-      Navigator.of(newContext).push(
-        MaterialPageRoute(
-          builder: (_) => PostDetailPage(
-            post: post,
-            userId: currentUser.uid,
-          ),
-        ),
-      );
-    } catch (e) {
-      debugPrint("Fehler bei Push-Navigation: $e");
+  Future<void> _safeNavigate(Future<void> Function() action) async {
+    if (_isNavigating) {
+      debugPrint("Push-Navigation übersprungen: bereits Navigation aktiv.");
+      return;
     }
+
+    _isNavigating = true;
+    try {
+      await action();
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 250));
+      _isNavigating = false;
+    }
+  }
+
+  bool _isCurrentRoute(String routeName) {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context == null) return false;
+
+    final route = ModalRoute.of(context);
+    return route?.settings.name == routeName;
+  }
+
+  Future<void> _popToRootAndSetTab(int tabIndex) async {
+    final navigator = NavigationService.navigatorKey.currentState;
+    if (navigator == null) {
+      debugPrint("Navigation nicht möglich: kein Navigator vorhanden.");
+      return;
+    }
+
+    navigator.popUntil((route) => route.isFirst);
+    AppShellService.setTab(tabIndex);
+
+    await Future.delayed(const Duration(milliseconds: 120));
+  }
+
+  Future<void> _handleMessageNavigation(RemoteMessage message) async {
+    await _safeNavigate(() async {
+      try {
+        final action = message.data["action"];
+
+        if (action == "open_chat") {
+          await _openChatFromPush(message.data);
+          return;
+        }
+
+        if (action == "open_chat_group") {
+          await _openChatGroup(message.data);
+          return;
+        }
+
+        if (action == "open_chat_list") {
+          await _openChatList();
+          return;
+        }
+
+        if (action == "open_creator_group") {
+          await _openCreatorGroup(message.data);
+          return;
+        }
+
+        final postId = message.data["postId"];
+        final currentUser = _auth.currentUser;
+
+        if (postId == null || postId.toString().isEmpty) {
+          debugPrint("Keine postId in der Push-Nachricht gefunden.");
+          return;
+        }
+
+        if (currentUser == null) {
+          debugPrint("Kein eingeloggter User vorhanden.");
+          return;
+        }
+
+        if (ContentStateService.currentOpenPostId == postId.toString()) {
+          debugPrint("Post ist bereits offen -> skip navigation");
+          return;
+        }
+
+        final post = await _postRepository.getPostById(postId.toString());
+        if (post == null) {
+          debugPrint("Post mit ID $postId konnte nicht geladen werden.");
+          return;
+        }
+
+        await _popToRootAndSetTab(0);
+
+        if (_isCurrentRoute(PostDetailPage.routeName)) {
+          debugPrint("PostDetailPage bereits oben -> skip push");
+          return;
+        }
+
+        final navigator = NavigationService.navigatorKey.currentState;
+        if (navigator == null) {
+          debugPrint("Navigation nicht möglich: kein Navigator vorhanden.");
+          return;
+        }
+
+        await navigator.push(
+          MaterialPageRoute(
+            settings: const RouteSettings(name: PostDetailPage.routeName),
+            builder: (_) => PostDetailPage(
+              post: post,
+              userId: currentUser.uid,
+            ),
+          ),
+        );
+      } catch (e) {
+        debugPrint("Fehler bei Push-Navigation: $e");
+      }
+    });
   }
 
   Future<void> _openCreatorGroup(Map<String, dynamic> data) async {
@@ -288,42 +322,41 @@ class PushService {
         return;
       }
 
+      if (ContentStateService.currentOpenCreatorId == creatorId.toString()) {
+        debugPrint("CreatorPostsPage ist bereits offen -> skip navigation");
+        return;
+      }
+
       final postIds = rawPostIds is List
           ? rawPostIds.map((e) => e.toString()).toList()
           : <String>[];
 
       final currentUserRole = await _userRepository.getUserRole(currentUser.uid);
-      final creator =
-      await _userRepository.getUserDetailsDto(creatorId.toString());
+      final creator = await _userRepository.getUserDetailsDto(
+        creatorId.toString(),
+      );
 
       if (creator == null) {
         debugPrint("Creator konnte nicht geladen werden.");
         return;
       }
 
-      final context = NavigationService.navigatorKey.currentContext;
-      if (context == null) {
-        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
+      await _popToRootAndSetTab(0);
+
+      if (_isCurrentRoute(CreatorPostsPage.routeName)) {
+        debugPrint("CreatorPostsPage bereits oben -> skip push");
         return;
       }
 
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const BottomNavBar(index: 0),
-        ),
-            (route) => route.isFirst,
-      );
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final newContext = NavigationService.navigatorKey.currentContext;
-      if (newContext == null) {
-        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
+      final navigator = NavigationService.navigatorKey.currentState;
+      if (navigator == null) {
+        debugPrint("Navigation nicht möglich: kein Navigator vorhanden.");
         return;
       }
 
-      Navigator.of(newContext).push(
+      await navigator.push(
         MaterialPageRoute(
+          settings: const RouteSettings(name: CreatorPostsPage.routeName),
           builder: (_) => CreatorPostsPage(
             creatorId: creatorId.toString(),
             currentUserId: currentUser.uid,
@@ -355,6 +388,11 @@ class PushService {
         return;
       }
 
+      if (ChatStateService.currentOpenChatId == chatId.toString()) {
+        debugPrint("Chat ist bereits offen -> skip navigation");
+        return;
+      }
+
       final me = await _userRepository.getUserDetailsDto(currentUser.uid);
       final other = await _userRepository.getUserDetailsDto(senderId.toString());
 
@@ -363,31 +401,23 @@ class PushService {
         return;
       }
 
-      final context = NavigationService.navigatorKey.currentContext;
-      if (context == null) {
-        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
-        return;
-      }
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const BottomNavBar(index: 2),
-        ),
-            (route) => route.isFirst,
-      );
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final newContext = NavigationService.navigatorKey.currentContext;
-      if (newContext == null) {
-        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
-        return;
-      }
-
+      await _popToRootAndSetTab(2);
       await LocalNotificationService.clearChatNotifications(chatId.toString());
 
-      Navigator.of(newContext).push(
+      if (_isCurrentRoute("chat_page")) {
+        debugPrint("ChatPage bereits oben -> skip push");
+        return;
+      }
+
+      final navigator = NavigationService.navigatorKey.currentState;
+      if (navigator == null) {
+        debugPrint("Navigation nicht möglich: kein Navigator vorhanden.");
+        return;
+      }
+
+      await navigator.push(
         MaterialPageRoute(
+          settings: const RouteSettings(name: ChatPage.routeName),
           builder: (_) => ChatPage(
             chatId: chatId.toString(),
             me: me,
@@ -412,6 +442,11 @@ class PushService {
 
       if (currentUser == null) {
         debugPrint("Kein eingeloggter User vorhanden.");
+        return;
+      }
+
+      if (ChatStateService.currentOpenChatId == chatId.toString()) {
+        debugPrint("Chat ist bereits offen -> skip navigation");
         return;
       }
 
@@ -448,31 +483,23 @@ class PushService {
         return;
       }
 
-      final context = NavigationService.navigatorKey.currentContext;
-      if (context == null) {
-        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
-        return;
-      }
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const BottomNavBar(index: 2),
-        ),
-            (route) => route.isFirst,
-      );
-
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final newContext = NavigationService.navigatorKey.currentContext;
-      if (newContext == null) {
-        debugPrint("Neuer Context nach BottomNavBar nicht verfügbar.");
-        return;
-      }
-
+      await _popToRootAndSetTab(2);
       await LocalNotificationService.clearChatNotifications(chatId.toString());
 
-      Navigator.of(newContext).push(
+      if (_isCurrentRoute("chat_page")) {
+        debugPrint("ChatPage bereits oben -> skip push");
+        return;
+      }
+
+      final navigator = NavigationService.navigatorKey.currentState;
+      if (navigator == null) {
+        debugPrint("Navigation nicht möglich: kein Navigator vorhanden.");
+        return;
+      }
+
+      await navigator.push(
         MaterialPageRoute(
+          settings: const RouteSettings(name: ChatPage.routeName),
           builder: (_) => ChatPage(
             chatId: chatId.toString(),
             me: me,
@@ -487,18 +514,7 @@ class PushService {
 
   Future<void> _openChatList() async {
     try {
-      final context = NavigationService.navigatorKey.currentContext;
-      if (context == null) {
-        debugPrint("Navigation nicht möglich: kein Context vorhanden.");
-        return;
-      }
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const BottomNavBar(index: 2),
-        ),
-            (route) => route.isFirst,
-      );
+      await _popToRootAndSetTab(2);
     } catch (e) {
       debugPrint("Fehler beim Öffnen der Chat-Liste: $e");
     }
