@@ -1,23 +1,59 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:social_media_app/pages/LoginPage.dart';
-import 'package:social_media_app/pages/authenticated_root.dart';
+import 'package:social_media_app/services/PushService.dart';
+import 'pages/LoginPage.dart';
+import 'pages/authenticated_root.dart';
 
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+
+class AuthGate extends StatefulWidget {
+  final String? initialLocalNotificationPayload;
+
+  const AuthGate({
+    super.key,
+    this.initialLocalNotificationPayload,
+  });
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _handledInitialLocalNotification = false;
+
+  Future<void> _tryHandleInitialLocalNotification() async {
+    if (_handledInitialLocalNotification) return;
+
+    final payload = widget.initialLocalNotificationPayload;
+    if (payload == null || payload.isEmpty) return;
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      debugPrint("[AuthGate] Kein eingeloggter User für Initial-Payload.");
+      return;
+    }
+
+    _handledInitialLocalNotification = true;
+
+    try {
+      final data = Map<String, dynamic>.from(jsonDecode(payload));
+      debugPrint("[AuthGate] Initial-Payload: $data");
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await PushService().handleNotificationTapData(data);
+      });
+    } catch (e) {
+      debugPrint("[AuthGate] Fehler beim Initial-Payload: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.userChanges(),
+      stream: FirebaseAuth.instance.authStateChanges(),
       initialData: FirebaseAuth.instance.currentUser,
       builder: (context, snapshot) {
-        debugPrint(
-          "[AuthGate] connection=${snapshot.connectionState}, "
-              "hasData=${snapshot.hasData}, "
-              "uid=${snapshot.data?.uid}",
-        );
-
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -25,18 +61,16 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          debugPrint("[AuthGate] Fehler: ${snapshot.error}");
           return const Scaffold(
             body: Center(child: Text("Fehler beim Laden der App.")),
           );
         }
 
-        if (snapshot.data != null) {
-          debugPrint("[AuthGate] -> AuthenticatedRoot");
+        if (snapshot.hasData) {
+          _tryHandleInitialLocalNotification();
           return const AuthenticatedRoot(index: 0);
         }
 
-        debugPrint("[AuthGate] -> LoginPage");
         return const LoginPage();
       },
     );

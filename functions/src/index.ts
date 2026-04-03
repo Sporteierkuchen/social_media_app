@@ -43,18 +43,15 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
         uploadText = "hat ein neues Video hochgeladen";
       }
 
+      const pushTitle = `${emoji} Neues von ${fullName}`;
+      const pushBody = `${username} ${uploadText}`;
+
       const imageUrl =
         post.thumbnailUrl && post.thumbnailUrl !== ""
           ? post.thumbnailUrl
           : post.mediaUrl ?? "";
 
       const db = admin.firestore();
-
-      /*
-       ----------------------------------------
-       SUBSCRIPTIONS LADEN
-       ----------------------------------------
-      */
 
       const subsSnapshot = await db
         .collection("subscriptions")
@@ -83,12 +80,6 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
 
       console.log("SubscriberIds:", JSON.stringify(uniqueSubscriberIds));
 
-      /*
-       ----------------------------------------
-       TOKENS SAMMELN
-       ----------------------------------------
-      */
-
       const tokenEntries: { uid: string; token: string }[] = [];
 
       for (const uid of uniqueSubscriberIds) {
@@ -102,21 +93,11 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
 
         tokenSnapshot.docs.forEach((doc) => {
           const token = doc.data().token as string | undefined;
-
           if (token) {
-            tokenEntries.push({
-              uid,
-              token,
-            });
+            tokenEntries.push({ uid, token });
           }
         });
       }
-
-      /*
-       ----------------------------------------
-       CREATOR TOKENS LADEN
-       ----------------------------------------
-      */
 
       const creatorTokenSnapshot = await db
         .collection("users")
@@ -129,12 +110,6 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
         .filter((token): token is string => Boolean(token));
 
       console.log("Creator Tokens:", JSON.stringify(creatorTokens));
-
-      /*
-       ----------------------------------------
-       TOKENS FILTERN
-       ----------------------------------------
-      */
 
       const uniqueTokens = [
         ...new Set(tokenEntries.map((entry) => entry.token)),
@@ -150,34 +125,36 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
         return;
       }
 
-      /*
-       ----------------------------------------
-       PUSH SENDEN
-       ----------------------------------------
-      */
-
+      // DATA-ONLY
       const message: admin.messaging.MulticastMessage = {
         tokens: uniqueTokens,
 
-        notification: {
-          title: `${emoji} Neues von ${fullName}`,
-          body: `${username} ${uploadText}`,
-        },
-
         data: {
-          postId: postId,
-          creatorId: creatorId,
-          type: type,
-          imageUrl: imageUrl,
-          mediaUrl: post.mediaUrl ?? "",
-          thumbnailUrl: post.thumbnailUrl ?? "",
-          postTitle: post.title ?? "",
+          action: "open_creator_group",
+          title: pushTitle,
+          body: pushBody,
+          postId: String(postId),
+          creatorId: String(creatorId),
+          creatorName: String(fullName),
+          type: String(type),
+          imageUrl: String(imageUrl),
+          mediaUrl: String(post.mediaUrl ?? ""),
+          thumbnailUrl: String(post.thumbnailUrl ?? ""),
+          postTitle: String(post.title ?? ""),
         },
 
         android: {
-          notification: {
-            imageUrl: imageUrl,
-            priority: "high",
+          priority: "high",
+        },
+
+        apns: {
+          headers: {
+            "apns-priority": "5",
+          },
+          payload: {
+            aps: {
+              "content-available": 1,
+            },
           },
         },
       };
@@ -186,12 +163,6 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
 
       console.log("Push gesendet:", response.successCount);
       console.log("Push Fehler:", response.failureCount);
-
-      /*
-       ----------------------------------------
-       UNGÜLTIGE TOKENS LÖSCHEN
-       ----------------------------------------
-      */
 
       const invalidTokens: { uid: string; token: string }[] = [];
 
@@ -204,7 +175,6 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
             error?.code === "messaging/invalid-registration-token"
           ) {
             const token = uniqueTokens[idx];
-
             const entry = tokenEntries.find((e) => e.token === token);
 
             if (entry) {
@@ -229,6 +199,10 @@ export const notifySubscribersOnNewPost = onDocumentCreated(
     }
   }
 );
+
+
+
+
 
 export const notifyReceiverOnNewMessage = onDocumentCreated(
   "chats/{chatId}/messages/{messageId}",
@@ -273,20 +247,21 @@ export const notifyReceiverOnNewMessage = onDocumentCreated(
         return;
       }
 
-      // Sender laden
       const senderSnap = await db.collection("users").doc(senderId).get();
       const senderData = senderSnap.data() ?? {};
 
-      const senderUsername = (senderData["benutzername"] as string | undefined) ?? "User";
-      const senderVorname = (senderData["vorname"] as string | undefined) ?? "";
-      const senderNachname = (senderData["nachname"] as string | undefined) ?? "";
+      const senderUsername =
+        (senderData["benutzername"] as string | undefined) ?? "User";
+      const senderVorname =
+        (senderData["vorname"] as string | undefined) ?? "";
+      const senderNachname =
+        (senderData["nachname"] as string | undefined) ?? "";
 
       let fullName = `${senderVorname} ${senderNachname}`.trim();
       if (fullName === "") {
         fullName = senderUsername;
       }
 
-      // Empfänger-Tokens laden
       const tokenSnap = await db
         .collection("users")
         .doc(receiverId)
@@ -309,36 +284,40 @@ export const notifyReceiverOnNewMessage = onDocumentCreated(
         body = "Hat dir eine Nachricht gesendet";
       }
 
+      // DATA-ONLY
       const response = await admin.messaging().sendEachForMulticast({
         tokens: uniqueTokens,
-        notification: {
+        data: {
+          action: "open_chat",
           title: `💬 ${fullName}`,
           body: body,
+          chatId: String(chatId),
+          messageId: String(messageId),
+          senderId: String(senderId),
+          receiverId: String(receiverId),
+          senderName: String(fullName),
+          senderUsername: String(senderUsername),
+          type: String(type),
+          text: String(text),
         },
         android: {
           priority: "high",
-          notification: {
-            channelId: "high_importance_channel",
-            tag: `chat_${chatId}`,
-          },
         },
-        data: {
-          action: "open_chat",
-          chatId: chatId,
-          messageId: messageId,
-          senderId: senderId,
-          receiverId: receiverId,
-          senderName: fullName,
-          senderUsername: senderUsername,
-          type: type,
-          text: text,
+        apns: {
+          headers: {
+            "apns-priority": "5",
+          },
+          payload: {
+            aps: {
+              "content-available": 1,
+            },
+          },
         },
       });
 
       console.log("Chat-Push gesendet:", response.successCount);
       console.log("Chat-Push Fehler:", response.failureCount);
 
-      // Ungültige Tokens löschen
       const invalidTokens: string[] = [];
 
       response.responses.forEach((resp, index) => {
@@ -372,6 +351,10 @@ export const notifyReceiverOnNewMessage = onDocumentCreated(
     }
   },
 );
+
+
+
+
 
 export const sendTestPushToAll = onRequest(async (req, res) => {
   const secret = req.query.secret;

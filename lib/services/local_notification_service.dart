@@ -9,6 +9,9 @@ import 'package:path_provider/path_provider.dart';
 class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
   FlutterLocalNotificationsPlugin();
+  static FlutterLocalNotificationsPlugin get plugin => _plugin;
+
+  static bool _initialized = false;
 
   static void Function(String payload)? onNotificationTap;
   static final Map<String, String> _latestGroupPayloads = {};
@@ -27,6 +30,9 @@ class LocalNotificationService {
   static final Map<String, String> _chatLastBodies = {};
 
   static Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const initSettings = InitializationSettings(
@@ -130,7 +136,7 @@ class LocalNotificationService {
         );
         return;
       } catch (e) {
-        debugPrint("Fehler beim Laden des Bildes für Notification: $e");
+        debugPrint("Fehler beim Anzeigen der Bild-Notification: $e");
       }
     }
 
@@ -182,7 +188,12 @@ class LocalNotificationService {
     if (_groupSummaryPayloads[groupKey] != null && summaryPayload != null) {
       try {
         final data = Map<String, dynamic>.from(jsonDecode(summaryPayload));
-        data["postIds"] = _groupPostIds[groupKey] ?? [];
+        final postIds = _groupPostIds[groupKey];
+
+        if (postIds != null && postIds.isNotEmpty) {
+          data["postIds"] = postIds;
+        }
+
         summaryPayload = jsonEncode(data);
       } catch (e) {
         debugPrint("Fehler beim Erstellen des Summary-Payloads: $e");
@@ -326,5 +337,4 @@ class LocalNotificationService {
       await _showChatSummary();
     }
   }
-
 }
