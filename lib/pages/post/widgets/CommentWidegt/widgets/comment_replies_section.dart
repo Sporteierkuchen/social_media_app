@@ -17,6 +17,7 @@ class CommentRepliesSection extends StatefulWidget {
   final bool isActive;
   final VoidCallback onClose; // z.B. reply input schließen
   final int pageSize;
+  final String? initialReplyId;
 
   const CommentRepliesSection({
     super.key,
@@ -27,6 +28,7 @@ class CommentRepliesSection extends StatefulWidget {
     required this.isActive,
     required this.onClose,
     this.pageSize = 2,
+    this.initialReplyId,
   });
 
   @override
@@ -37,6 +39,10 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
 
   final TextEditingController _replyController = TextEditingController();
   bool _isSendingReply = false;
+
+  final Map<String, GlobalKey> _replyKeys = {};
+  bool _initialReplyScrollDone = false;
+  String? _highlightedReplyId;
 
   @override
   void dispose() {
@@ -155,13 +161,24 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
                 final doc = snapshot.docs[index];
                 final reply = ReplyDto.fromDocument(doc);
 
-                return ReplyWidget(
-                  key: ValueKey(reply.id),
-                  reply: reply,
-                  userData: widget.currentUser,
-                  onTapped: widget.onTapped,
-                  videoRepository: widget.postRepository,
+                final key = _getReplyKey(reply.id);
+
+                if (widget.initialReplyId != null && widget.initialReplyId == reply.id) {
+                  _scrollToReplyIfNeeded(reply.id);
+                }
+
+                return Container(
+                  key: key,
+                  child: ReplyWidget(
+                    key: ValueKey(reply.id),
+                    reply: reply,
+                    userData: widget.currentUser,
+                    onTapped: widget.onTapped,
+                    videoRepository: widget.postRepository,
+                    highlighted: _highlightedReplyId == reply.id,
+                  ),
                 );
+
               },
             );
           },
@@ -209,6 +226,45 @@ class _CommentRepliesSectionState extends State<CommentRepliesSection> {
       if (!mounted) return;
       setState(() => _isSendingReply = false);
     }
+  }
+
+  GlobalKey _getReplyKey(String replyId) {
+    return _replyKeys.putIfAbsent(replyId, () => GlobalKey());
+  }
+
+  void _scrollToReplyIfNeeded(String replyId) {
+    if (_initialReplyScrollDone) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final key = _replyKeys[replyId];
+      final context = key?.currentContext;
+
+      if (context != null) {
+        _initialReplyScrollDone = true;
+
+        await Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.2,
+        );
+
+        if (mounted) {
+          setState(() {
+            _highlightedReplyId = replyId;
+          });
+        }
+
+        Future.delayed(const Duration(seconds: 3), () {
+          if (!mounted) return;
+          if (_highlightedReplyId == replyId) {
+            setState(() {
+              _highlightedReplyId = null;
+            });
+          }
+        });
+      }
+    });
   }
 
 }

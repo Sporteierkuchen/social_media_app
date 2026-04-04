@@ -19,6 +19,8 @@ class CommentWidget extends StatefulWidget {
   final VoidCallback onReplyTapped;
   final VoidCallback onTapped;
   final PostRepository postRepository;
+  final String? initialReplyId;
+  final bool highlighted;
 
   const CommentWidget({
     super.key,
@@ -28,6 +30,8 @@ class CommentWidget extends StatefulWidget {
     required this.onReplyTapped,
     required this.onTapped,
     required this.postRepository,
+    this.initialReplyId,
+    this.highlighted = false,
   });
 
   @override
@@ -73,11 +77,17 @@ class CommentWidgetState extends State<CommentWidget> {
     final bool enabled = !isLoading && canInteract;
     final double opacity = enabled ? 1.0 : 0.35;
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 0),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.symmetric(vertical: 0),
       decoration: BoxDecoration(
-        color: Colors.black,
-        border: Border(top: BorderSide(color: Colors.grey, width: 1)),
+        color: widget.highlighted ? const Color(0xFF4A3B00) : Colors.black,
+        border: Border(
+          top: BorderSide(
+            color: widget.highlighted ? Colors.amber : Colors.grey,
+            width: widget.highlighted ? 2 : 1,
+          ),
+        ),
       ),
       child: Column(
         children: [
@@ -114,6 +124,7 @@ class CommentWidgetState extends State<CommentWidget> {
                 postRepository: widget.postRepository,
                 isActive: widget.isActive,
                 onClose: widget.onReplyTapped, // toggelt wieder zu
+                initialReplyId: widget.initialReplyId,
               ),
             ),
           ),

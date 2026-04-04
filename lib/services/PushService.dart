@@ -93,6 +93,7 @@ class PushService {
 
   static Future<void> handleIncomingMessage(RemoteMessage message) async {
     final action = message.data["action"]?.toString() ?? "";
+    final type = message.data["type"]?.toString() ?? "";
 
     switch (action) {
       case "open_chat":
@@ -103,9 +104,44 @@ class PushService {
         await _handleIncomingCreatorUpload(message);
         return;
 
-      case "new_comment":
-        await _handleIncomingComment(message);
-        return;
+      case "open_post":
+        switch (type) {
+          case "new_comment":
+            await _handleIncomingComment(message);
+            return;
+
+          case "new_reply":
+            await _handleIncomingReply(message);
+            return;
+
+          case "post_like_summary":
+            await _handleIncomingPostLikeSummary(message);
+            return;
+
+          case "post_dislike_summary":
+            await _handleIncomingPostDislikeSummary(message);
+            return;
+
+          case "comment_like_summary":
+            await _handleIncomingCommentLikeSummary(message);
+            return;
+
+          case "reply_like_summary":
+            await _handleIncomingReplyLikeSummary(message);
+            return;
+
+          case "post_comment_summary":
+            await _handleIncomingPostCommentSummary(message);
+            return;
+
+          case "comment_reply_summary":
+            await _handleIncomingCommentReplySummary(message);
+            return;
+
+          default:
+            await _handleIncomingDefault(message);
+            return;
+        }
 
       case "new_follower":
         await _handleIncomingFollower(message);
@@ -215,6 +251,90 @@ class PushService {
     );
   }
 
+  static Future<void> _handleIncomingReply(RemoteMessage message) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "reply_notifications_${message.data["commentId"] ?? "unknown"}",
+      groupTitle: "↩️ Neue Antworten",
+    );
+  }
+
+  static Future<void> _handleIncomingPostLikeSummary(
+      RemoteMessage message,
+      ) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "post_like_summary_${message.data["postId"] ?? "unknown"}",
+      groupTitle: "👍 Neue Likes",
+    );
+  }
+
+  static Future<void> _handleIncomingPostDislikeSummary(
+      RemoteMessage message,
+      ) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "post_dislike_summary_${message.data["postId"] ?? "unknown"}",
+      groupTitle: "👎 Neue Dislikes",
+    );
+  }
+
+  static Future<void> _handleIncomingCommentLikeSummary(
+      RemoteMessage message,
+      ) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "comment_like_summary_${message.data["commentId"] ?? "unknown"}",
+      groupTitle: "👍 Neue Likes auf Kommentar",
+    );
+  }
+
+  static Future<void> _handleIncomingReplyLikeSummary(
+      RemoteMessage message,
+      ) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "reply_like_summary_${message.data["replyId"] ?? "unknown"}",
+      groupTitle: "👍 Neue Likes auf Antwort",
+    );
+  }
+
+  static Future<void> _handleIncomingPostCommentSummary(
+      RemoteMessage message,
+      ) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "post_comment_summary_${message.data["postId"] ?? "unknown"}",
+      groupTitle: "💬 Neue Kommentare",
+    );
+  }
+
+  static Future<void> _handleIncomingCommentReplySummary(
+      RemoteMessage message,
+      ) async {
+    await LocalNotificationService.showNotification(
+      title: _messageTitle(message),
+      body: _messageBody(message),
+      payload: _messagePayload(message),
+      groupKey: "comment_reply_summary_${message.data["commentId"] ?? "unknown"}",
+      groupTitle: "↩️ Neue Antworten",
+    );
+  }
+
+
+
   static Future<void> _handleIncomingFollower(RemoteMessage message) async {
     await LocalNotificationService.showNotification(
       title: _messageTitle(message),
@@ -313,6 +433,7 @@ class PushService {
     await _safeNavigate(() async {
       try {
         final action = message.data["action"]?.toString() ?? "";
+        final type = message.data["type"]?.toString() ?? "";
 
         switch (action) {
           case "open_chat":
@@ -332,23 +453,47 @@ class PushService {
             return;
 
           case "open_post":
-            await _navigateToPostDetail(message.data);
-            return;
+            switch (type) {
+              case "new_comment":
+                await _navigateToComment(message.data);
+                return;
 
-          case "new_comment":
-            await _navigateToComment(message.data);
-            return;
+              case "new_reply":
+                await _navigateToReply(message.data);
+                return;
+
+              case "post_like_summary":
+              case "post_dislike_summary":
+              case "comment_like_summary":
+              case "reply_like_summary":
+                await _navigateToPostDetail(message.data);
+                return;
+
+              case "post_comment_summary":
+                await _navigateToCommentSummary(message.data);
+                return;
+
+              case "comment_reply_summary":
+                await _navigateToCommentSummary(message.data);
+                return;
+
+              default:
+                await _navigateToPostDetail(message.data);
+                return;
+            }
 
           case "new_follower":
             await _navigateToFollower(message.data);
             return;
 
           default:
-            await _navigateToPostDetail(message.data);
+            debugPrint("Unbekannte Action -> gehe zur Home");
+            await _navigateToHome();
             return;
         }
       } catch (e) {
         debugPrint("Fehler bei Push-Navigation: $e");
+        await _navigateToHome();
       }
     });
   }
@@ -397,6 +542,8 @@ class PushService {
         builder: (_) => PostDetailPage(
           post: post,
           userId: currentUser.uid,
+          initialCommentId: data["commentId"]?.toString(),
+          initialReplyId: data["replyId"]?.toString(),
         ),
       ),
     );
@@ -605,8 +752,58 @@ class PushService {
     await _navigateToPostDetail(data);
   }
 
+  Future<void> _navigateToReply(Map<String, dynamic> data) async {
+    await _navigateToPostDetail(data);
+  }
+
   Future<void> _navigateToFollower(Map<String, dynamic> data) async {
     debugPrint("Follower-Navigation noch nicht implementiert: $data");
+  }
+
+  Future<void> _navigateToCommentSummary(Map<String, dynamic> data) async {
+    final postId = data["postId"];
+    final currentUser = _auth.currentUser;
+
+    if (postId == null || postId.toString().isEmpty) {
+      debugPrint("Keine postId in der Push-Nachricht gefunden.");
+      return;
+    }
+
+    if (currentUser == null) {
+      debugPrint("Kein eingeloggter User vorhanden.");
+      return;
+    }
+
+    final post = await _postRepository.getPostById(postId.toString());
+    if (post == null) {
+      debugPrint("Post mit ID $postId konnte nicht geladen werden.");
+      return;
+    }
+
+    await _popToRootAndSetTab(0);
+
+    final navigator = NavigationService.navigatorKey.currentState;
+    if (navigator == null) {
+      debugPrint("Navigation nicht möglich: kein Navigator vorhanden.");
+      return;
+    }
+
+    await navigator.push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: PostDetailPage.routeName),
+        builder: (_) => PostDetailPage(
+          post: post,
+          userId: currentUser.uid,
+          initialCommentId: data["commentId"]?.toString(),
+          initialReplyId: data["replyId"]?.toString(),
+          initialOpenComments: true,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _navigateToHome() async {
+    await _popToRootAndSetTab(0);
   }
 
   Future<void> handleNotificationTapData(Map<String, dynamic> data) async {

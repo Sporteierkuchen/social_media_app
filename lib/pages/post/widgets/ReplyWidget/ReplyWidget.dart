@@ -14,6 +14,7 @@ class ReplyWidget extends StatefulWidget {
   final UserDto userData;
   final VoidCallback onTapped;
   final PostRepository videoRepository;
+  final bool highlighted;
 
   const ReplyWidget({
     super.key,
@@ -21,6 +22,7 @@ class ReplyWidget extends StatefulWidget {
     required this.userData,
     required this.onTapped,
     required this.videoRepository,
+    this.highlighted = false,
   });
 
   @override
@@ -56,11 +58,16 @@ class ReplyWidgetState extends State<ReplyWidget> {
 
     final bool enabled = !isLoading && canInteract;
 
-    return Container(
-      margin: const EdgeInsets.only(top: 10, left: 20, bottom: 10),
-      decoration: const BoxDecoration(
-        color: Colors.black,
-        border: Border(top: BorderSide(color: Colors.grey, width: 0.5)),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        color: widget.highlighted ? const Color(0xFF4A3B00) : Colors.black,
+        border: Border(
+          top: BorderSide(
+            color: widget.highlighted ? Colors.amber : Colors.grey,
+            width: widget.highlighted ? 1.5 : 0.5,
+          ),
+        ),
       ),
       child: Column(
         children: [

@@ -7,21 +7,22 @@ import '../../../models/Meldung.dart';
 import '../../../models/PostDto.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/post_repository.dart';
+import '../../../repositories/user_repository.dart';
 import '../../../util/HelperUtil.dart';
 import 'CommentWidegt/CommentWidget.dart';
 
 
 class PostCommentsSection extends StatefulWidget {
-
   final PostDto post;
   final UserDto currentUser;
   final Future<void> Function() onPauseVideo;
-  // ✅ von außen
   final Query<Map<String, dynamic>> commentsQuery;
   final Stream<int> commentsCountStream;
   final int pageSize;
   final PostRepository postRepository;
 
+  final String? initialCommentId;
+  final String? initialReplyId;
 
   const PostCommentsSection({
     super.key,
@@ -32,6 +33,8 @@ class PostCommentsSection extends StatefulWidget {
     required this.commentsCountStream,
     this.pageSize = 10,
     required this.postRepository,
+    this.initialCommentId,
+    this.initialReplyId,
   });
 
   @override
@@ -43,9 +46,21 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
   final TextEditingController _commentController = TextEditingController();
   bool _isSending = false;
   String? _activeReplyCommentId;
+  String? _highlightedCommentId;
+
+  final Map<String, GlobalKey> _commentKeys = {};
+  bool _initialScrollDone = false;
+
+  final userRepository = UserRepository();
+
 
   @override
   void dispose() {
+    final userId = widget.currentUser.userid;
+    if (userId != null && userId.isNotEmpty) {
+      UserRepository().setActiveComment(userId: userId, commentId: null);
+    }
+
     _commentController.dispose();
     super.dispose();
   }
@@ -183,14 +198,33 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
                 final doc = snapshot.docs[index];
                 final comment = CommentDto.fromDocument(doc);
 
-                return CommentWidget(
-                  key: ValueKey(comment.id), // ✅ verhindert State-Verschiebung
-                  comment: comment,
-                  userData: widget.currentUser,
-                  onTapped: widget.onPauseVideo,
-                  isActive: _activeReplyCommentId == comment.id,
-                  onReplyTapped: () => _toggleReplyInput(comment.id),
-                  postRepository: widget.postRepository,
+                final key = _getCommentKey(comment.id);
+
+                final shouldOpenReplySection = widget.initialReplyId != null &&
+                    widget.initialCommentId == comment.id;
+
+                final shouldScrollToThisComment =
+                    widget.initialCommentId != null &&
+                        widget.initialCommentId == comment.id;
+
+                if (shouldScrollToThisComment) {
+                  _scrollToCommentIfNeeded(comment.id);
+                }
+
+                return Container(
+                  key: key,
+                  child: CommentWidget(
+                    key: ValueKey(comment.id),
+                    comment: comment,
+                    userData: widget.currentUser,
+                    onTapped: widget.onPauseVideo,
+                    isActive: _activeReplyCommentId == comment.id || shouldOpenReplySection,
+                    onReplyTapped: () => _toggleReplyInput(comment.id),
+                    postRepository: widget.postRepository,
+                    initialReplyId: widget.initialReplyId,
+                    highlighted: _highlightedCommentId == comment.id,
+
+                  ),
                 );
 
 
@@ -241,12 +275,72 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
     }
   }
 
-  void _toggleReplyInput(String commentId) {
+  void _toggleReplyInput(String commentId) async {
+    final userId = widget.currentUser.userid;
+    if (userId == null || userId.isEmpty) return;
+
+
     setState(() {
       if (_activeReplyCommentId == commentId) {
         _activeReplyCommentId = null;
       } else {
         _activeReplyCommentId = commentId;
+      }
+    });
+
+    try {
+      if (_activeReplyCommentId == null) {
+        await userRepository.setActiveComment(
+          userId: userId,
+          commentId: null,
+        );
+      } else {
+        await userRepository.setActiveComment(
+          userId: userId,
+          commentId: _activeReplyCommentId,
+        );
+      }
+    } catch (e) {
+      debugPrint("[PostCommentsSection] Fehler beim Setzen von activeCommentId: $e");
+    }
+  }
+
+  GlobalKey _getCommentKey(String commentId) {
+    return _commentKeys.putIfAbsent(commentId, () => GlobalKey());
+  }
+
+  void _scrollToCommentIfNeeded(String commentId) {
+    if (_initialScrollDone) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final key = _commentKeys[commentId];
+      final context = key?.currentContext;
+
+      if (context != null) {
+        _initialScrollDone = true;
+
+        await Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.15,
+        );
+
+        if (mounted) {
+          setState(() {
+            _activeReplyCommentId = commentId;
+            _highlightedCommentId = commentId;
+          });
+        }
+
+        Future.delayed(const Duration(seconds: 3), () {
+          if (!mounted) return;
+          if (_highlightedCommentId == commentId) {
+            setState(() {
+              _highlightedCommentId = null;
+            });
+          }
+        });
       }
     });
   }

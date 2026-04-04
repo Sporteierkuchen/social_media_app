@@ -16,15 +16,21 @@ import '../../services/content_state_service.dart';
 import '../../util/HelperUtil.dart';
 
 class PostDetailPage extends StatefulWidget {
-  static const String routeName = "post_detail";
+  static const String routeName = "post_detail_page";
 
   final PostDto post;
   final String userId;
+  final String? initialCommentId;
+  final String? initialReplyId;
+  final bool initialOpenComments;
 
   const PostDetailPage({
     super.key,
     required this.post,
     required this.userId,
+    this.initialCommentId,
+    this.initialReplyId,
+    this.initialOpenComments = false,
   });
 
   @override
@@ -34,6 +40,7 @@ class PostDetailPage extends StatefulWidget {
 class _PostDetailPageState extends State<PostDetailPage> {
   final PostRepository _postRepository = PostRepository();
   final UserRepository _userRepository = UserRepository();
+  bool _activeContextSet = false;
 
   VideoPlayerController? _videoPlayerController;
   ChewieController? chewieController;
@@ -44,6 +51,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   bool playerReady = false;
   bool isLoading = true;
+
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _commentsSectionKey = GlobalKey();
 
   @override
   void initState() {
@@ -57,11 +67,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   @override
   void dispose() {
     debugPrint("[PostDetail] dispose() PostID=${widget.post.id}");
-
-    if (ContentStateService.currentOpenPostId == widget.post.id) {
-      ContentStateService.currentOpenPostId = null;
-    }
-
+    _clearActivePostContext();
     _videoPlayerController?.dispose();
     chewieController?.dispose();
     super.dispose();
@@ -127,14 +133,18 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     ),
                     userRepository: _userRepository,
                   ),
-                  PostCommentsSection(
-                    post: widget.post,
-                    currentUser: userData,
-                    onPauseVideo: _pauseVideo,
-                    commentsQuery: _postRepository.commentsQuery(widget.post.id),
-                    commentsCountStream:
-                    _postRepository.commentsCountStream(widget.post.id),
-                    postRepository: _postRepository,
+                  Container(
+                    key: _commentsSectionKey,
+                    child: PostCommentsSection(
+                      post: widget.post,
+                      currentUser: userData,
+                      onPauseVideo: _pauseVideo,
+                      commentsQuery: _postRepository.commentsQuery(widget.post.id),
+                      commentsCountStream: _postRepository.commentsCountStream(widget.post.id),
+                      postRepository: _postRepository,
+                      initialCommentId: widget.initialCommentId,
+                      initialReplyId: widget.initialReplyId,
+                    ),
                   ),
                 ],
               );
@@ -154,10 +164,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     await _incrementViewCount();
     await _checkUserLikeDislikeStatus();
+    await _setActivePostContext();
 
-    if (mounted) {
-      setState(() => isLoading = false);
-    }
+    if (mounted) setState(() => isLoading = false);
+
+    await _scrollToCommentsSectionIfNeeded();
 
     debugPrint("[PostDetail] initialize() fertig");
   }
@@ -333,4 +344,54 @@ class _PostDetailPageState extends State<PostDetailPage> {
       }
     }
   }
+
+  Future<void> _setActivePostContext() async {
+    if (_activeContextSet) return;
+
+    if (widget.userId.isEmpty) return;
+
+    try {
+      await _userRepository.setActivePost(
+        userId: widget.userId,
+        postId: widget.post.id,
+      );
+      _activeContextSet = true;
+      debugPrint("[PostDetail] activePostId gesetzt: ${widget.post.id}");
+    } catch (e) {
+      debugPrint("[PostDetail] Fehler beim Setzen von activePostId: $e");
+    }
+  }
+
+  Future<void> _clearActivePostContext() async {
+    if (!_activeContextSet) return;
+    if (widget.userId.isEmpty) return;
+
+    try {
+      await _userRepository.clearActivePostContext(
+        userId: widget.userId,
+      );
+      debugPrint("[PostDetail] activePostId/activeCommentId gelöscht");
+    } catch (e) {
+      debugPrint("[PostDetail] Fehler beim Löschen des aktiven Post-Kontexts: $e");
+    }
+  }
+
+  Future<void> _scrollToCommentsSectionIfNeeded() async {
+    if (!widget.initialOpenComments) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      final context = _commentsSectionKey.currentContext;
+      if (context != null) {
+        await Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.05,
+        );
+      }
+    });
+  }
+
 }

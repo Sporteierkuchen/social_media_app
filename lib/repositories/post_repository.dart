@@ -160,7 +160,6 @@ class PostRepository {
       await _deleteCommentsAndReplies(postId);
 
       // 2) Subcollections direkt am Post löschen
-      await _deleteSubcollection(postRef, 'userreactions');
       await _deleteSubcollection(postRef, 'userInteractions');
 
       // 3) Post-Dokument löschen
@@ -637,7 +636,7 @@ class PostRepository {
     try {
       final interactionRef = _comments
           .doc(commentId)
-          .collection('userreactions')
+          .collection('userInteractions')
           .doc(userId);
       final snap = await interactionRef.get();
 
@@ -675,7 +674,7 @@ class PostRepository {
   }) async {
     final commentRef = _comments.doc(commentId);
     final interactionRef =
-    commentRef.collection('userreactions').doc(userId);
+    commentRef.collection('userInteractions').doc(userId);
 
     try {
       await _firestore.runTransaction((transaction) async {
@@ -740,7 +739,7 @@ class PostRepository {
   }) async {
     final commentRef = _comments.doc(commentId);
     final interactionRef =
-    commentRef.collection('userreactions').doc(userId);
+    commentRef.collection('userInteractions').doc(userId);
 
     try {
       await _firestore.runTransaction((transaction) async {
@@ -885,7 +884,7 @@ class PostRepository {
     // Reaktionen des Kommentars
     await _deleteSubcollection(
       commentRef,
-      'userreactions',
+      'userInteractions',
       batch: batch,
     );
 
@@ -894,10 +893,10 @@ class PostRepository {
     await _replies.where('commentId', isEqualTo: commentRef.id).get();
 
     for (var replyDoc in replySnapshot.docs) {
-      // userreactions der Reply
+      // userInteractions der Reply
       await _deleteSubcollection(
         replyDoc.reference,
-        'userreactions',
+        'userInteractions',
         batch: batch,
       );
 
@@ -954,7 +953,7 @@ class PostRepository {
     try {
       final interactionRef = _replies
           .doc(replyId)
-          .collection('userreactions')
+          .collection('userInteractions')
           .doc(userId);
       final snap = await interactionRef.get();
 
@@ -988,7 +987,7 @@ class PostRepository {
   }) async {
     final replyRef = _replies.doc(replyId);
     final interactionRef =
-    replyRef.collection('userreactions').doc(userId);
+    replyRef.collection('userInteractions').doc(userId);
 
     try {
       await _firestore.runTransaction((transaction) async {
@@ -1053,7 +1052,7 @@ class PostRepository {
   }) async {
     final replyRef = _replies.doc(replyId);
     final interactionRef =
-    replyRef.collection('userreactions').doc(userId);
+    replyRef.collection('userInteractions').doc(userId);
 
     try {
       await _firestore.runTransaction((transaction) async {
@@ -1146,12 +1145,12 @@ class PostRepository {
         return;
       }
 
-      // 1) Alle userreactions löschen (ggf. in Seiten)
+      // 1) Alle userInteractions löschen (ggf. in Seiten)
       QuerySnapshot<Map<String, dynamic>> reactionsSnap;
 
       while (true) {
         reactionsSnap = await replyRef
-            .collection('userreactions')
+            .collection('userInteractions')
             .get();
 
         if (reactionsSnap.docs.isEmpty) break;
@@ -1166,7 +1165,7 @@ class PostRepository {
       // 2) Reply selbst löschen
       await replyRef.delete();
 
-      debugPrint("[VideoRepository] Reply + userreactions gelöscht (id=$replyId)");
+      debugPrint("[VideoRepository] Reply + userInteractions gelöscht (id=$replyId)");
     } catch (e) {
       debugPrint("[VideoRepository] Fehler bei deleteReply(replyId=$replyId): $e");
       rethrow;

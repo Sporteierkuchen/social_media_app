@@ -17,7 +17,7 @@ class ReplyDto {
   final Timestamp? timestamp;
 
   /// Optional: Status für den AKTUELL eingeloggten User
-  /// (aus Subcollection `userreactions`)
+  /// (aus Subcollection `userInteractions`)
   final bool? likedByCurrentUser;
   final bool? dislikedByCurrentUser;
 
@@ -36,7 +36,7 @@ class ReplyDto {
     this.dislikedByCurrentUser,
   });
 
-  /// Aus Firestore-Dokument erstellen (ohne userreactions)
+  /// Aus Firestore-Dokument erstellen (ohne userInteractions)
   factory ReplyDto.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
 
@@ -55,7 +55,7 @@ class ReplyDto {
   }
 
   /// DTO um Likes/Dislikes des aktuellen Users ergänzen
-  /// (z. B. aus `comments/{commentId}/userreactions/{userId}`)
+  /// (z. B. aus `comments/{commentId}/userInteractions/{userId}`)
   ReplyDto copyWithUserReaction({
     bool? likedByCurrentUser,
     bool? dislikedByCurrentUser,

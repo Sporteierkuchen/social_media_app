@@ -764,14 +764,14 @@ class UserRepository {
           batch.delete(replyDoc.reference);
 
           final replyReactions =
-          await replyDoc.reference.collection('userreactions').get();
+          await replyDoc.reference.collection('userInteractions').get();
           for (var reactionDoc in replyReactions.docs) {
             batch.delete(reactionDoc.reference);
           }
         }
 
         final commentReactions =
-        await commentDoc.reference.collection('userreactions').get();
+        await commentDoc.reference.collection('userInteractions').get();
         for (var reactionDoc in commentReactions.docs) {
           batch.delete(reactionDoc.reference);
         }
@@ -799,7 +799,35 @@ class UserRepository {
     }, SetOptions(merge: true));
   }
 
+  Future<void> setActivePost({
+    required String userId,
+    required String? postId,
+  }) async {
+    await _firestore.collection("users").doc(userId).set({
+      "activePostId": postId,
+      "lastActiveAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
+  Future<void> setActiveComment({
+    required String userId,
+    required String? commentId,
+  }) async {
+    await _firestore.collection("users").doc(userId).set({
+      "activeCommentId": commentId,
+      "lastActiveAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> clearActivePostContext({
+    required String userId,
+  }) async {
+    await _firestore.collection("users").doc(userId).set({
+      "activePostId": null,
+      "activeCommentId": null,
+      "lastActiveAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
 
 }
