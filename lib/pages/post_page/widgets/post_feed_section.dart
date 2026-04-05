@@ -1,19 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/PostDto.dart';
-
 import '../../../repositories/post_repository.dart';
 import '../../../util/HelperUtil.dart';
 import '../../../widgets/PostWidget.dart';
 
-
-class PostFeedSection extends StatelessWidget {
+class PostFeedSection extends StatefulWidget {
   final PostRepository postRepository;
   final String userRole;
   final String currentUserId;
-
-  final String search; // client-side filter
+  final String search;
   final List<String> selectedCategories;
   final PostMediaFilter mediaFilter;
   final int pageSize;
@@ -30,18 +28,62 @@ class PostFeedSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  State<PostFeedSection> createState() => _PostFeedSectionState();
+}
 
-    final query = postRepository.postsQuery(
-      search: search,
-      selectedCategories: selectedCategories,
-      mediaFilter: mediaFilter,
-      limit: pageSize,
+class _PostFeedSectionState extends State<PostFeedSection>
+    with AutomaticKeepAliveClientMixin {
+  bool _fetchTriggered = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  void _triggerFetchMoreIfNeeded(
+      FirestoreQueryBuilderSnapshot<Map<String, dynamic>> snapshot,
+      ) {
+    if (!snapshot.hasMore) return;
+    if (snapshot.isFetchingMore) return;
+    if (_fetchTriggered) return;
+
+    _fetchTriggered = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      snapshot.fetchMore();
+
+      // erst zurücksetzen, wenn wirklich fertig
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _fetchTriggered = false;
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    final normalizedSearch = widget.search.toLowerCase().trim();
+    final bool isSearchMode = normalizedSearch.isNotEmpty;
+
+    final Query<Map<String, dynamic>> query = isSearchMode
+        ? widget.postRepository.searchPostsByTitleQuery(
+      searchText: normalizedSearch,
+      selectedCategories: widget.selectedCategories,
+      mediaFilter: widget.mediaFilter,
+      limit: widget.pageSize,
+    )
+        : widget.postRepository.postsFeedQuery(
+      selectedCategories: widget.selectedCategories,
+      mediaFilter: widget.mediaFilter,
+      limit: widget.pageSize,
     );
 
     return FirestoreQueryBuilder<Map<String, dynamic>>(
       query: query,
-      pageSize: pageSize,
+      pageSize: widget.pageSize,
       builder: (context, snapshot, _) {
         if (snapshot.isFetching && snapshot.docs.isEmpty) {
           return const Center(
@@ -53,71 +95,73 @@ class PostFeedSection extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          return Text(
-            "Fehler beim Laden: ${snapshot.error}",
-            style: const TextStyle(color: Colors.red),
+          return Center(
+            child: Text(
+              "Fehler beim Laden: ${snapshot.error}",
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
           );
         }
 
-        // 1) docs -> posts
-        final normalized = search.toLowerCase().trim();
-
         final posts = snapshot.docs
             .map((d) => PostDto.fromSnapshot(d))
-            .where((p) {
-          if (normalized.isEmpty) return true;
-          final title = p.title.toLowerCase();
-          final name = "${p.vorname.toLowerCase()} ${p.nachname.toLowerCase()}";
-          return title.contains(normalized) || name.contains(normalized);
-        })
             .toList();
 
         if (posts.isEmpty) {
-          return Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 20, bottom: 10),
-                child: Text(
-                  "Keine Beiträge vorhanden!",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 20, bottom: 10),
+              child: Text(
+                isSearchMode
+                    ? "Keine Suchergebnisse gefunden!"
+                    : "Keine Beiträge vorhanden!",
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
                 ),
+                textAlign: TextAlign.center,
               ),
-            ],
+            ),
           );
         }
 
         return ListView.builder(
-          itemCount: posts.length + 1,
+          key: PageStorageKey<String>(
+            isSearchMode ? 'post_search_list' : 'post_feed_list',
+          ),
+          cacheExtent: 1800,
+          addAutomaticKeepAlives: true,
+          addRepaintBoundaries: true,
+          itemCount: posts.length +
+              ((!isSearchMode && (snapshot.hasMore || snapshot.isFetchingMore))
+                  ? 1
+                  : 0),
           itemBuilder: (context, index) {
-            if (index == posts.length) {
-              if (!snapshot.hasMore) return const SizedBox.shrink();
+            if (!isSearchMode && index >= posts.length - 3) {
+              _triggerFetchMoreIfNeeded(snapshot);
+            }
 
-              if (snapshot.isFetchingMore) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                );
-              }
-
-              return TextButton(
-                onPressed: snapshot.fetchMore,
-                child: const Text("Mehr laden", style: TextStyle(color: Colors.grey)),
+            if (!isSearchMode && index >= posts.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
               );
             }
 
             final post = posts[index];
 
-            return PostWidget(
-              post: post,
-              userId: currentUserId,
-              userRole: userRole,
-              postRepository: postRepository,
+            return RepaintBoundary(
+              child: PostWidget(
+                key: ValueKey(post.id),
+                post: post,
+                userId: widget.currentUserId,
+                userRole: widget.userRole,
+                postRepository: widget.postRepository,
+              ),
             );
           },
         );

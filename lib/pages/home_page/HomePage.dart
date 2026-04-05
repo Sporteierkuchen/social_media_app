@@ -11,7 +11,7 @@ import 'widgets/Info_block.dart';
 import 'widgets/best_videos_section.dart';
 
 class HomePage extends StatefulWidget {
-  final double contentHeight; // sichtbare Höhe (ohne BottomNavBar)
+  final double contentHeight;
 
   const HomePage({
     super.key,
@@ -22,19 +22,24 @@ class HomePage extends StatefulWidget {
   State<StatefulWidget> createState() => HomePageState();
 }
 
-class HomePageState extends State<HomePage> {
-  String? userID; // aktuell eingeloggter User (oder null)
+class HomePageState extends State<HomePage>
+    with AutomaticKeepAliveClientMixin {
+  String? userID;
 
   final PostRepository _postRepository = PostRepository();
   final UserRepository _userRepository = UserRepository();
   final AuthRepository _authRepository = AuthRepository();
+
+  UserDto? _lastUser;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
     debugPrint("[HomePage] initState() aufgerufen");
 
-    // Aktuellen User holen (falls nicht eingeloggt => null)
     userID = _authRepository.currentUserId;
     debugPrint("[HomePage] currentUserId = $userID");
   }
@@ -47,74 +52,95 @@ class HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     debugPrint("[HomePage] build() ausgeführt. userID=$userID");
 
-    // Falls kein User eingeloggt ist
     if (userID == null) {
       debugPrint("[HomePage] Kein User eingeloggt -> Hinweis anzeigen");
       return const Center(
-        child: Text("Bitte einloggen, um den Feed zu sehen."),
+        child: Text(
+          "Bitte einloggen, um den Feed zu sehen.",
+          style: TextStyle(color: Colors.white),
+        ),
       );
     }
 
     final double heroHeight = widget.contentHeight;
     debugPrint("[HomePage] HeroHeight (contentHeight) = $heroHeight");
 
-    return StreamBuilder<UserDto?>(
-      stream: _userRepository.userStream(userID!),
-      builder: (context, snapshot) {
-        debugPrint(
-          "[HomePage] StreamBuilder<UserDto?> build: "
-              "connectionState=${snapshot.connectionState}, "
-              "hasError=${snapshot.hasError}, "
-              "hasData=${snapshot.hasData}",
-        );
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          debugPrint("[HomePage] User-Stream wartet noch...");
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          debugPrint("[HomePage] Fehler im User-Stream: ${snapshot.error}");
-          return const Center(
-            child: Text("Fehler beim Laden der Benutzerdaten."),
+    return Container(
+      key: const PageStorageKey<String>('home_page_scroll_root'),
+      color: Colors.black,
+      child: StreamBuilder<UserDto?>(
+        stream: _userRepository.userStream(userID!),
+        initialData: _lastUser,
+        builder: (context, snapshot) {
+          debugPrint(
+            "[HomePage] StreamBuilder<UserDto?> build: "
+                "connectionState=${snapshot.connectionState}, "
+                "hasError=${snapshot.hasError}, "
+                "hasData=${snapshot.hasData}",
           );
-        }
 
-        final user = snapshot.data;
+          if (snapshot.hasError) {
+            debugPrint("[HomePage] Fehler im User-Stream: ${snapshot.error}");
+            return const Center(
+              child: Text(
+                "Fehler beim Laden der Benutzerdaten.",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          }
 
-        if (user == null) {
-          debugPrint("[HomePage] User-Stream liefert null -> Konto nicht gefunden");
-          return const Center(
-            child: Text("Benutzerkonto nicht gefunden."),
-          );
-        }
+          final user = snapshot.data;
 
-        final String userrole = user.role ?? "USER";
-        debugPrint("[HomePage] User loaded: uid=${user.userid}, role=$userrole");
+          if (user == null) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              debugPrint("[HomePage] User-Stream wartet noch...");
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
 
-        return Container(
-          color: Colors.black,
-          child: SingleChildScrollView(
+            debugPrint("[HomePage] User-Stream liefert null -> Konto nicht gefunden");
+            return const Center(
+              child: Text(
+                "Benutzerkonto nicht gefunden.",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          }
+
+          _lastUser = user;
+
+          final String userrole = user.role ?? "USER";
+          debugPrint("[HomePage] User loaded: uid=${user.userid}, role=$userrole");
+
+          return SingleChildScrollView(
+            key: const PageStorageKey<String>('home_page_scroll'),
             child: Column(
               children: [
-                // ---------- HERO-BILD ----------
                 HomeHeroImage(
                   userRole: userrole,
                   height: heroHeight,
                 ),
 
-                // ✅ Beste Bilder
                 StreamBuilder<List<PostDto>>(
                   stream: _postRepository.bestImagesPostsStream(limit: 4),
                   builder: (context, snap) {
                     final loading =
-                        snap.connectionState == ConnectionState.waiting;
-                    final posts = snap.data ?? [];
+                        snap.connectionState == ConnectionState.waiting && !snap.hasData;
+                    final posts = snap.data ?? const <PostDto>[];
 
                     if (snap.hasError) {
-                      return const Text("Fehler beim Laden der besten Bilder");
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          "Fehler beim Laden der besten Bilder",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      );
                     }
 
                     return BestBilderSection(
@@ -127,16 +153,22 @@ class HomePageState extends State<HomePage> {
                   },
                 ),
 
-                // ✅ Beste Videos
                 StreamBuilder<List<PostDto>>(
                   stream: _postRepository.bestVideosPostsStream(limit: 4),
                   builder: (context, snap) {
                     final loading =
-                        snap.connectionState == ConnectionState.waiting;
-                    final posts = snap.data ?? [];
+                        snap.connectionState == ConnectionState.waiting &&
+                            !snap.hasData;
+                    final posts = snap.data ?? const <PostDto>[];
 
                     if (snap.hasError) {
-                      return const Text("Fehler beim Laden der besten Videos");
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          "Fehler beim Laden der besten Videos",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      );
                     }
 
                     return BestVideosSection(
@@ -151,14 +183,13 @@ class HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 24),
 
-                // ---------- INFO-BLÖCKE ----------
-                Padding(
-                  padding: const EdgeInsets.symmetric(
+                const Padding(
+                  padding: EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 16,
                   ),
                   child: Column(
-                    children: const [
+                    children: [
                       InfoBlock(
                         imagePath: 'assets/images/page/home_page/bild1.jpg',
                         title: 'Was ist diese App?',
@@ -184,9 +215,9 @@ class HomePageState extends State<HomePage> {
                 const SizedBox(height: 32),
               ],
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

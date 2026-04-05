@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/PostDto.dart';
 import '../../../repositories/post_repository.dart';
-import '../../../widgets/PostWidget.dart';
+import 'home_post_card.dart';
 
 class BestBilderSection extends StatelessWidget {
   final bool isLoading;
@@ -21,8 +22,12 @@ class BestBilderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (currentUserId == null) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
-      width: double.infinity, // ✅ volle Breite
+      width: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.black,
         border: Border(
@@ -32,28 +37,24 @@ class BestBilderSection extends StatelessWidget {
       child: Column(
         children: [
           const Padding(
-            padding: EdgeInsets.only(left: 10, right: 10, top: 20, bottom: 10),
+            padding: EdgeInsets.only(left: 10, right: 10, top: 20, bottom: 14),
             child: Text(
               "Die Besten Bilder",
               style: TextStyle(
-                fontSize: 35,
-                height: 0,
+                fontSize: 30,
                 color: Colors.orange,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
-              softWrap: true,
             ),
           ),
           if (isLoading)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.5,
-                  height: MediaQuery.of(context).size.width * 0.5,
-                  child: const CircularProgressIndicator(),
-                ),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 20, top: 6),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(color: Colors.white),
               ),
             )
           else if (posts.isEmpty)
@@ -65,19 +66,30 @@ class BestBilderSection extends StatelessWidget {
               ),
             )
           else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return PostWidget(
-                  post: post,
-                  userId: currentUserId,
-                  userRole: userRole,
-                  postRepository: postRepository,
-                );
-              },
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: posts.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.78,
+                ),
+                itemBuilder: (context, index) {
+                  final post = posts[index];
+
+                  return RepaintBoundary(
+                    child: HomePostCard(
+                      key: ValueKey(post.id),
+                      post: post,
+                      currentUserId: currentUserId!,
+                    ),
+                  );
+                },
+              ),
             ),
         ],
       ),

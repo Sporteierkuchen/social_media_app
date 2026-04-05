@@ -108,8 +108,7 @@ class PostRepository {
       bestPostsStream(type: 'image', limit: limit, sortByViews: true);
 
 
-  Query<Map<String, dynamic>> postsQuery({
-    String search = "",
+  Query<Map<String, dynamic>> postsFeedQuery({
     List<String> selectedCategories = const [],
     PostMediaFilter mediaFilter = PostMediaFilter.all,
     int? limit,
@@ -122,18 +121,80 @@ class PostRepository {
       query = query.where('category', arrayContainsAny: selectedCategories);
     }
 
-    // ✅ Media-Type Filter
     if (mediaFilter == PostMediaFilter.videos) {
       query = query.where('type', isEqualTo: 'video');
     } else if (mediaFilter == PostMediaFilter.images) {
       query = query.where('type', isEqualTo: 'image');
     }
 
-    if (limit != null) query = query.limit(limit);
+    if (limit != null) {
+      query = query.limit(limit);
+    }
 
     return query;
   }
 
+  Query<Map<String, dynamic>> searchPostsByTitleQuery({
+    required String searchText,
+    List<String> selectedCategories = const [],
+    PostMediaFilter mediaFilter = PostMediaFilter.all,
+    int? limit,
+  }) {
+    final normalized = searchText.toLowerCase().trim();
+
+    Query<Map<String, dynamic>> query = _firestore
+        .collection('posts')
+        .orderBy('titleLower')
+        .startAt([normalized])
+        .endAt(['$normalized\uf8ff']);
+
+    if (selectedCategories.isNotEmpty) {
+      query = query.where('category', arrayContainsAny: selectedCategories);
+    }
+
+    if (mediaFilter == PostMediaFilter.videos) {
+      query = query.where('type', isEqualTo: 'video');
+    } else if (mediaFilter == PostMediaFilter.images) {
+      query = query.where('type', isEqualTo: 'image');
+    }
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query;
+  }
+
+  Query<Map<String, dynamic>> searchPostsByFullNameQuery({
+    required String searchText,
+    List<String> selectedCategories = const [],
+    PostMediaFilter mediaFilter = PostMediaFilter.all,
+    int? limit,
+  }) {
+    final normalized = searchText.toLowerCase().trim();
+
+    Query<Map<String, dynamic>> query = _firestore
+        .collection('posts')
+        .orderBy('fullNameLower')
+        .startAt([normalized])
+        .endAt(['$normalized\uf8ff']);
+
+    if (selectedCategories.isNotEmpty) {
+      query = query.where('category', arrayContainsAny: selectedCategories);
+    }
+
+    if (mediaFilter == PostMediaFilter.videos) {
+      query = query.where('type', isEqualTo: 'video');
+    } else if (mediaFilter == PostMediaFilter.images) {
+      query = query.where('type', isEqualTo: 'image');
+    }
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query;
+  }
 
   // ------------------------------------------------------------
   // POST LÖSCHEN + KOMMENTARE / REPLIES / REACTIONS
@@ -145,53 +206,56 @@ class PostRepository {
       final snap = await postRef.get();
 
       if (!snap.exists) {
-        print("deletePost: Post $postId existiert nicht");
+        debugPrint("deletePost: Post $postId existiert nicht");
         return false;
       }
 
       final data = snap.data() as Map<String, dynamic>? ?? {};
 
-      // Neues Schema:
-      final String type = (data['type'] ?? '') as String; // "post" | "image"
-      final String mediaUrl = (data['mediaUrl'] ?? '') as String;
-      final String thumbnailUrl = (data['thumbnailUrl'] ?? '') as String;
+      final String type = (data['type'] as String? ?? '').trim();
+      final String mediaUrl = (data['mediaUrl'] as String? ?? '').trim();
+      final String thumbnailUrl = (data['thumbnailUrl'] as String? ?? '').trim();
+      final String previewUrl = (data['previewUrl'] as String? ?? '').trim();
+      final String fullImageUrl = (data['fullImageUrl'] as String? ?? '').trim();
 
-      // 1) Kommentare + Replies löschen (falls du das pro Post so nutzt)
+      // Alle eindeutigen Storage-URLs sammeln
+      final Set<String> storageUrls = {
+        if (mediaUrl.isNotEmpty) mediaUrl,
+        if (thumbnailUrl.isNotEmpty) thumbnailUrl,
+        if (previewUrl.isNotEmpty) previewUrl,
+        if (fullImageUrl.isNotEmpty) fullImageUrl,
+      };
+
+      // 1) Kommentare + Replies löschen
       await _deleteCommentsAndReplies(postId);
 
       // 2) Subcollections direkt am Post löschen
       await _deleteSubcollection(postRef, 'userInteractions');
 
+      // Falls du später weitere direkte Subcollections am Post hast,
+      // hier ebenfalls ergänzen:
+      // await _deleteSubcollection(postRef, 'xyz');
+
       // 3) Post-Dokument löschen
       await postRef.delete();
 
-      // 4) Dateien aus Storage löschen
-      //    - mediaUrl immer (Video oder Bild)
-      //    - thumbnailUrl nur bei Video (falls vorhanden)
-      if (mediaUrl.isNotEmpty) {
+      // 4) Dateien aus Firebase Storage löschen
+      for (final url in storageUrls) {
         try {
-          final storageRef = _storage.refFromURL(mediaUrl);
+          final storageRef = _storage.refFromURL(url);
           await storageRef.delete();
+          debugPrint("deletePost: Storage-Datei gelöscht: $url");
         } catch (e) {
-          print("deletePost: mediaUrl konnte nicht gelöscht werden: $e");
-          // du kannst hier entscheiden: return false oder weiter machen.
-          // Ich mache weiter, damit Firestore cleanup nicht scheitert.
+          debugPrint("deletePost: Storage-Datei konnte nicht gelöscht werden ($url): $e");
         }
       }
 
-      if (thumbnailUrl.isNotEmpty) {
-        try {
-          final storageRef2 = _storage.refFromURL(thumbnailUrl);
-          await storageRef2.delete();
-        } catch (e) {
-          print("deletePost: thumbnailUrl konnte nicht gelöscht werden: $e");
-        }
-      }
-
-      print("Post ($type) und zugehörige Subcollections erfolgreich gelöscht.");
+      debugPrint(
+        "deletePost: Post ($type) inkl. Firestore-Daten und Storage-Dateien erfolgreich gelöscht.",
+      );
       return true;
     } catch (e) {
-      print("Fehler beim Löschen des Posts: $e");
+      debugPrint("Fehler beim Löschen des Posts: $e");
       return false;
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:social_media_app/pages/MigrationTestPage.dart';
 import 'package:social_media_app/pages/post_page/PostPage.dart';
 import 'package:social_media_app/services/app_shell_service.dart';
 
@@ -16,6 +17,8 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class _BottomNavBarState extends State<BottomNavBar> {
+  final PageStorageBucket _bucket = PageStorageBucket();
+
   @override
   void initState() {
     super.initState();
@@ -31,7 +34,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final barHeight = mediaQuery.size.height * 0.09;
-
     final double contentHeight =
         mediaQuery.size.height - mediaQuery.padding.top - barHeight;
 
@@ -49,7 +51,19 @@ class _BottomNavBarState extends State<BottomNavBar> {
           child: Scaffold(
             resizeToAvoidBottomInset: false,
             body: SafeArea(
-              child: _buildScreen(currentIndex, contentHeight),
+              child: PageStorage(
+                bucket: _bucket,
+                child: IndexedStack(
+                  index: currentIndex,
+                  children: [
+                    HomePage(contentHeight: contentHeight),
+                    const PostPage(),
+                    //MigrationTestPage(),
+                    ChatListPage(),
+                    const PersonalInfoPage(),
+                  ],
+                ),
+              ),
             ),
             bottomNavigationBar: SizedBox(
               height: barHeight,
@@ -79,28 +93,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
         );
       },
     );
-  }
-
-  Widget _buildScreen(int currentIndex, double contentHeight) {
-    switch (currentIndex) {
-      case 0:
-        debugPrint("[BottomNavBar] _buildScreen -> HomePage");
-        return HomePage(contentHeight: contentHeight);
-      case 1:
-        debugPrint("[BottomNavBar] _buildScreen -> PostPage");
-        return const PostPage();
-      case 2:
-        debugPrint("[BottomNavBar] _buildScreen -> ChatsScreen");
-        return ChatListPage();
-      case 3:
-        debugPrint("[BottomNavBar] _buildScreen -> PersonalInfoPage");
-        return const PersonalInfoPage();
-      default:
-        debugPrint(
-          "[BottomNavBar] _buildScreen -> Default -> HomePage (index=$currentIndex)",
-        );
-        return HomePage(contentHeight: contentHeight);
-    }
   }
 
   List<BottomNavigationBarItem> getItems(

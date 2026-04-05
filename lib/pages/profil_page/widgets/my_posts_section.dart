@@ -6,13 +6,11 @@ import '../../../models/UserDto.dart';
 import '../../../repositories/post_repository.dart';
 import '../../../widgets/PostWidget.dart';
 
-
 enum MyMediaFilter { all, videos, images }
 
 class MyPostsSection extends StatefulWidget {
-  final UserDto userData; // = aktueller User
+  final UserDto userData;
   final PostRepository postRepository;
-
   final int pageSize;
 
   const MyPostsSection({
@@ -26,15 +24,43 @@ class MyPostsSection extends StatefulWidget {
   State<MyPostsSection> createState() => _MyPostsSectionState();
 }
 
-class _MyPostsSectionState extends State<MyPostsSection> {
+class _MyPostsSectionState extends State<MyPostsSection>
+    with AutomaticKeepAliveClientMixin {
   MyMediaFilter _filter = MyMediaFilter.all;
+  bool _fetchTriggered = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  void _triggerFetchMoreIfNeeded(
+      FirestoreQueryBuilderSnapshot<Map<String, dynamic>> snapshot,
+      ) {
+    if (!snapshot.hasMore) return;
+    if (snapshot.isFetchingMore) return;
+    if (_fetchTriggered) return;
+
+    _fetchTriggered = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      snapshot.fetchMore();
+
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) {
+          _fetchTriggered = false;
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     final userId = widget.userData.userid!;
     final type = _typeForFilter(_filter);
 
-    // ✅ Query wie bei UserInfoPostsSection
     final Query<Map<String, dynamic>> query = widget.postRepository.userPostsQuery(
       userId: userId,
       type: type,
@@ -43,11 +69,11 @@ class _MyPostsSectionState extends State<MyPostsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ---- Titel + Live-Count ----
         StreamBuilder<int>(
           stream: _countStreamForFilter(_filter),
           builder: (context, snap) {
             final countText = snap.hasData ? "${snap.data}" : "…";
+
             return Padding(
               padding: const EdgeInsets.only(top: 40),
               child: Text(
@@ -64,7 +90,6 @@ class _MyPostsSectionState extends State<MyPostsSection> {
 
         const SizedBox(height: 10),
 
-        // ---- Filter (Alle / Videos / Bilder) ----
         Row(
           children: [
             _FilterChip(
@@ -89,9 +114,8 @@ class _MyPostsSectionState extends State<MyPostsSection> {
 
         const SizedBox(height: 10),
 
-        // ---- Paging + Realtime ----
         FirestoreQueryBuilder<Map<String, dynamic>>(
-          key: ValueKey("${userId}_${type ?? "all"}"),
+          key: ValueKey("my_posts_${userId}_${type ?? "all"}"),
           query: query,
           pageSize: widget.pageSize,
           builder: (context, snapshot, _) {
@@ -118,43 +142,47 @@ class _MyPostsSectionState extends State<MyPostsSection> {
               );
             }
 
+            final posts = snapshot.docs
+                .map((doc) => PostDto.fromSnapshot(doc))
+                .toList();
+
             return ListView.builder(
+              key: PageStorageKey<String>('my_posts_list_${type ?? "all"}'),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.docs.length + 1,
+              cacheExtent: 1800,
+              addAutomaticKeepAlives: true,
+              addRepaintBoundaries: true,
+              itemCount:
+              posts.length + (snapshot.hasMore || snapshot.isFetchingMore ? 1 : 0),
               itemBuilder: (context, index) {
-                // Load more row
-                if (index == snapshot.docs.length) {
-                  if (!snapshot.hasMore) return const SizedBox(height: 20);
+                if (index >= posts.length - 2) {
+                  _triggerFetchMoreIfNeeded(snapshot);
+                }
 
-                  if (snapshot.isFetchingMore) {
-                    return const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
-                    );
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6, bottom: 10),
+                if (index >= posts.length) {
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 12),
                     child: Center(
-                      child: TextButton(
-                        onPressed: snapshot.fetchMore,
-                        child: const Text("Mehr laden", style: TextStyle(color: Colors.grey)),
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(color: Colors.white),
                       ),
                     ),
                   );
                 }
 
-                final doc = snapshot.docs[index];
-                final post = PostDto.fromSnapshot(doc);
+                final post = posts[index];
 
-                return PostWidget(
-                  post: post,
-                  userId: widget.userData.userid,
-                  userRole: widget.userData.role ?? "USER",
-                  postRepository: widget.postRepository,
+                return RepaintBoundary(
+                  child: PostWidget(
+                    key: ValueKey(post.id),
+                    post: post,
+                    userId: widget.userData.userid,
+                    userRole: widget.userData.role ?? "USER",
+                    postRepository: widget.postRepository,
+                  ),
                 );
               },
             );
@@ -163,8 +191,6 @@ class _MyPostsSectionState extends State<MyPostsSection> {
       ],
     );
   }
-
-  // ---------------- helpers ----------------
 
   String? _typeForFilter(MyMediaFilter f) {
     switch (f) {
@@ -216,17 +242,17 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
         decoration: BoxDecoration(
           color: active ? Colors.orange : Colors.grey[800],
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.white24),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Text(
           label,
           style: TextStyle(
-            height: 0,
             fontWeight: FontWeight.bold,
             color: active ? Colors.black : Colors.white,
             fontSize: 14,

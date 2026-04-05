@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:social_media_app/pages/post_page/widgets/post_actions_bar.dart';
 import 'package:social_media_app/pages/post_page/widgets/post_feed_section.dart';
@@ -18,13 +17,13 @@ class PostPage extends StatefulWidget {
   State<PostPage> createState() => _PostPageState();
 }
 
-class _PostPageState extends State<PostPage> {
-
-  final PostRepository _postRepository = PostRepository(); // für delete/like etc.
+class _PostPageState extends State<PostPage>
+    with AutomaticKeepAliveClientMixin {
+  final PostRepository _postRepository = PostRepository();
   final AuthRepository _authRepository = AuthRepository();
   final UserRepository _userRepository = UserRepository();
 
-  final fieldText = TextEditingController();
+  final TextEditingController fieldText = TextEditingController();
 
   bool isLoading = true;
 
@@ -35,11 +34,11 @@ class _PostPageState extends State<PostPage> {
 
   late final String? userID;
 
-  // Anzahl der bisherigen Fehler (Captcha oder Eingaben)
   int warningCounter = 0;
-
-  // Max. Anzahl Warnungen bevor Bestrafung
   static const int maxWarnings = 3;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -56,124 +55,121 @@ class _PostPageState extends State<PostPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        child: StreamBuilder<UserDto?>(
-          stream: _userRepository.userStream(userID!),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const Center(
-                child: Text(
-                  "Fehler beim Laden des Benutzers",
-                  style: TextStyle(color: Colors.red),
-                ),
-              );
-            }
+    super.build(context);
 
-            final userData = snapshot.data;
-            final String userrole = userData?.role ?? "MELKER";
-
-            return Container(
-              color: Colors.black,
-              child: Column(
-                children: [
-
-                  // 1) Aktionen (Filter / Hochladen / Suche)
-                  PostActionsBar(
-                    userRole: userrole,
-                    categories: _categories,
-                    selectedCategories: _selectedCategories,
-                    searchController: fieldText,
-
-                    onFilterTapped: () async {
-
-                        await showDialog(
-                          barrierDismissible: false,
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                dialogTheme: DialogThemeData(
-                                  backgroundColor: Colors.black,
-                                ),
-                              ),
-                              child: CustomDialog(
-                                kategorien: _categories,
-                                selectedCategories: _selectedCategories,
-                                updateSelectedCategories: (selected) async {
-                                  setState(() => _selectedCategories = selected);
-                                  await _updateSearchQuery(fieldText.text);
-                                },
-                              ),
-                            );
-                          },
-                        );
-
-                    },
-
-                    onUploadTapped: () async {
-                      if (userrole == "RESTRICTED-USER") {
-                        HelperUtil.getToast(
-                          meldung: Meldung(
-                            meldungsart: Meldungsart.WARNING,
-                            text: "Du darfst keine Beiträge hochladen!",
-                          )
-                        );
-                        _handleWarning();
-                      } else {
-                        // ✅ Hier später: PostUploadScreen (Video oder Bild)
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const PostUploadScreen()),
-                        );
-
-                        // danach Query neu anwenden
-                        await _updateSearchQuery(fieldText.text);
-                      }
-                    },
-
-                    onSearchChanged: (value) {
-                      // wie bei dir: nur wenn nicht leer
-                      if (value.trim().isNotEmpty) {
-                        _updateSearchQuery(value);
-                      }
-                    },
-                    onSearchSubmitted: (value) {
-                      if (value.trim().isNotEmpty) {
-                        _updateSearchQuery(value);
-                      }
-                    },
-                    onSearchClear: () {
-                      fieldText.clear();
-                      _updateSearchQuery("");
-                    },
-                    mediaFilter: _mediaFilter,
-                    onMediaFilterChanged: (filter) async {
-                      setState(() => _mediaFilter = filter);
-                    },
-                  ),
-
-                  // 2) Feed
-                  Expanded(
-                    child: PostFeedSection(
-                      postRepository: _postRepository,
-                      userRole: userrole,
-                      currentUserId: userID!,
-                      search: _searchQuery,
-                      selectedCategories: _selectedCategories,
-                      mediaFilter: _mediaFilter, // ✅ neu
-                      pageSize: 20,
-                    ),
-                  ),
-
-
-                ],
-              ),
-            );
-          },
+    if (userID == null) {
+      return const Center(
+        child: Text(
+          "Kein Benutzer gefunden.",
+          style: TextStyle(color: Colors.white),
         ),
-      ),
+      );
+    }
+
+    return StreamBuilder<UserDto?>(
+      stream: _userRepository.userStream(userID!),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text(
+              "Fehler beim Laden des Benutzers",
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final userData = snapshot.data;
+        final String userrole = userData?.role ?? "MELKER";
+
+        return Container(
+          key: const PageStorageKey<String>('post_page'),
+          color: Colors.black,
+          child: Column(
+            children: [
+              PostActionsBar(
+                userRole: userrole,
+                categories: _categories,
+                selectedCategories: _selectedCategories,
+                searchController: fieldText,
+                onFilterTapped: () async {
+                  await showDialog(
+                    barrierDismissible: false,
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          dialogTheme: const DialogThemeData(
+                            backgroundColor: Colors.black,
+                          ),
+                        ),
+                        child: CustomDialog(
+                          kategorien: _categories,
+                          selectedCategories: _selectedCategories,
+                          updateSelectedCategories: (selected) async {
+                            setState(() => _selectedCategories = selected);
+                            _updateSearchQuery(fieldText.text);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+                onUploadTapped: () async {
+                  if (userrole == "RESTRICTED-USER") {
+                    HelperUtil.getToast(
+                      meldung: Meldung(
+                        meldungsart: Meldungsart.WARNING,
+                        text: "Du darfst keine Beiträge hochladen!",
+                      ),
+                    );
+                    _handleWarning();
+                  } else {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PostUploadScreen(),
+                      ),
+                    );
+
+                    _updateSearchQuery(fieldText.text);
+                  }
+                },
+                onSearchChanged: (value) {
+                  _updateSearchQuery(value);
+                },
+                onSearchSubmitted: (value) {
+                  _updateSearchQuery(value);
+                },
+                onSearchClear: () {
+                  fieldText.clear();
+                  _updateSearchQuery("");
+                },
+                mediaFilter: _mediaFilter,
+                onMediaFilterChanged: (filter) {
+                  setState(() => _mediaFilter = filter);
+                },
+              ),
+
+              Expanded(
+                child: isLoading
+                    ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+                    : PostFeedSection(
+                  key: const PageStorageKey<String>('post_feed_section'),
+                  postRepository: _postRepository,
+                  userRole: userrole,
+                  currentUserId: userID!,
+                  search: _searchQuery,
+                  selectedCategories: _selectedCategories,
+                  mediaFilter: _mediaFilter,
+                  pageSize: 20,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -189,23 +185,20 @@ class _PostPageState extends State<PostPage> {
 
   Future<void> _fetchCategories() async {
     try {
-      // du hast das aktuell im VideoRepository -> kannst du später in PostRepository verschieben
       final categories = await _postRepository.fetchCategories();
       if (!mounted) return;
+
       setState(() => _categories = categories);
     } catch (e) {
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Laden der Kategorien: $e",
-        )
+        ),
       );
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Warnlogik
-  // ---------------------------------------------------------------------------
   void _handleWarning() {
     if (warningCounter < maxWarnings) {
       warningCounter++;
@@ -214,12 +207,13 @@ class _PostPageState extends State<PostPage> {
     }
   }
 
-  // ✅ Suche/Filter ändern -> nur State updaten
-  Future<void> _updateSearchQuery(String query) async {
+  void _updateSearchQuery(String query) {
+    final normalized = query.toLowerCase().trim();
+
+    if (_searchQuery == normalized) return;
+
     setState(() {
-      _searchQuery = query.toLowerCase().trim();
+      _searchQuery = normalized;
     });
-
   }
-
 }

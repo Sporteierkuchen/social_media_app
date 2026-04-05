@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -40,6 +41,7 @@ class PostDetailPage extends StatefulWidget {
 class _PostDetailPageState extends State<PostDetailPage> {
   final PostRepository _postRepository = PostRepository();
   final UserRepository _userRepository = UserRepository();
+
   bool _activeContextSet = false;
 
   VideoPlayerController? _videoPlayerController;
@@ -70,6 +72,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     _clearActivePostContext();
     _videoPlayerController?.dispose();
     chewieController?.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -79,23 +82,30 @@ class _PostDetailPageState extends State<PostDetailPage> {
       backgroundColor: Colors.black,
       body: SafeArea(
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: StreamBuilder<UserDto?>(
             stream: _userRepository.userStream(widget.userId),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return const Center(
-                  child: Text(
-                    "Fehler beim Laden des Benutzers",
-                    style: TextStyle(color: Colors.red),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      "Fehler beim Laden des Benutzers",
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 );
               }
 
               if (!snapshot.hasData || snapshot.data == null) {
                 return const Center(
-                  child: Text(
-                    "Benutzer nicht gefunden",
-                    style: TextStyle(color: Colors.white),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      "Benutzer nicht gefunden",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 );
               }
@@ -140,7 +150,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                       currentUser: userData,
                       onPauseVideo: _pauseVideo,
                       commentsQuery: _postRepository.commentsQuery(widget.post.id),
-                      commentsCountStream: _postRepository.commentsCountStream(widget.post.id),
+                      commentsCountStream:
+                      _postRepository.commentsCountStream(widget.post.id),
                       postRepository: _postRepository,
                       initialCommentId: widget.initialCommentId,
                       initialReplyId: widget.initialReplyId,
@@ -166,7 +177,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
     await _checkUserLikeDislikeStatus();
     await _setActivePostContext();
 
-    if (mounted) setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
 
     await _scrollToCommentsSectionIfNeeded();
 
@@ -176,8 +189,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Future<void> _initializeVideoPlayer() async {
     try {
       final url = widget.post.mediaUrl;
+
       if (url.isEmpty) {
-        await HelperUtil.getToast(
+        HelperUtil.getToast(
           meldung: Meldung(
             meldungsart: Meldungsart.ERROR,
             text: "Für dieses Video ist keine URL vorhanden.",
@@ -191,7 +205,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
       chewieController = ChewieController(
         videoPlayerController: _videoPlayerController!,
-        aspectRatio: 16 / 9,
+        aspectRatio: _videoPlayerController!.value.aspectRatio == 0
+            ? 16 / 9
+            : _videoPlayerController!.value.aspectRatio,
         autoPlay: false,
         looping: false,
       );
@@ -201,7 +217,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       }
     } catch (e) {
       debugPrint("[PostDetail] Fehler VideoPlayer: $e");
-      await HelperUtil.getToast(
+      HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Initialisieren des Video-Players:\n$e",
@@ -221,10 +237,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Future<void> _incrementViewCount() async {
     try {
       await _postRepository.incrementViewCount(widget.post.id);
-      debugPrint("[PostPage] ViewCount für PostID=${widget.post.id} erhöht");
+      debugPrint("[PostDetail] ViewCount für PostID=${widget.post.id} erhöht");
     } catch (error) {
-      debugPrint("[PostPage] Fehler beim Erhöhen der Aufrufzahl: $error");
-      await HelperUtil.getToast(
+      debugPrint("[PostDetail] Fehler beim Erhöhen der Aufrufzahl: $error");
+      HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Erhöhen der Aufrufzahl:\n$error",
@@ -248,11 +264,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
       });
 
       debugPrint(
-        "[PostPage] Like/Dislike-Status: liked=$isLiked, disliked=$isDisliked",
+        "[PostDetail] Like/Dislike-Status: liked=$isLiked, disliked=$isDisliked",
       );
     } catch (e) {
-      debugPrint("[PostPage] Fehler beim Abrufen des Like/Dislike-Status: $e");
-      await HelperUtil.getToast(
+      debugPrint("[PostDetail] Fehler beim Abrufen des Like/Dislike-Status: $e");
+      HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abrufen des Like/Dislike-Status:\n$e",
@@ -278,20 +294,28 @@ class _PostDetailPageState extends State<PostDetailPage> {
         isDisliked: isDisliked,
       );
 
-      if (mounted) {
-        setState(() {
-          isLiked = !isLiked;
-          if (isLiked) {
-            isDisliked = false;
-          }
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        final bool wasLiked = isLiked;
+        final bool wasDisliked = isDisliked;
+
+        if (!wasLiked && !wasDisliked) {
+          isLiked = true;
+          isDisliked = false;
+        } else if (wasLiked && !wasDisliked) {
+          isLiked = false;
+        } else if (!wasLiked && wasDisliked) {
+          isLiked = true;
+          isDisliked = false;
+        }
+      });
     } catch (e) {
-      debugPrint("[PostPage] Fehler beim Liken des Post: $e");
-      await HelperUtil.getToast(
+      debugPrint("[PostDetail] Fehler beim Liken des Posts: $e");
+      HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
-          text: "Fehler beim Liken des Post:\n$e",
+          text: "Fehler beim Liken des Posts:\n$e",
         ),
       );
     } finally {
@@ -320,20 +344,28 @@ class _PostDetailPageState extends State<PostDetailPage> {
         isDisliked: isDisliked,
       );
 
-      if (mounted) {
-        setState(() {
-          isDisliked = !isDisliked;
-          if (isDisliked) {
-            isLiked = false;
-          }
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        final bool wasLiked = isLiked;
+        final bool wasDisliked = isDisliked;
+
+        if (!wasLiked && !wasDisliked) {
+          isDisliked = true;
+          isLiked = false;
+        } else if (!wasLiked && wasDisliked) {
+          isDisliked = false;
+        } else if (wasLiked && !wasDisliked) {
+          isDisliked = true;
+          isLiked = false;
+        }
+      });
     } catch (e) {
-      debugPrint("[PostPage] Fehler beim Disliken des Post: $e");
-      await HelperUtil.getToast(
+      debugPrint("[PostDetail] Fehler beim Disliken des Posts: $e");
+      HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
-          text: "Fehler beim Disliken des Post:\n$e",
+          text: "Fehler beim Disliken des Posts:\n$e",
         ),
       );
     } finally {
@@ -347,7 +379,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   Future<void> _setActivePostContext() async {
     if (_activeContextSet) return;
-
     if (widget.userId.isEmpty) return;
 
     try {
@@ -355,6 +386,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
         userId: widget.userId,
         postId: widget.post.id,
       );
+
       _activeContextSet = true;
       debugPrint("[PostDetail] activePostId gesetzt: ${widget.post.id}");
     } catch (e) {
@@ -372,7 +404,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
       );
       debugPrint("[PostDetail] activePostId/activeCommentId gelöscht");
     } catch (e) {
-      debugPrint("[PostDetail] Fehler beim Löschen des aktiven Post-Kontexts: $e");
+      debugPrint(
+        "[PostDetail] Fehler beim Löschen des aktiven Post-Kontexts: $e",
+      );
     }
   }
 
@@ -382,10 +416,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.delayed(const Duration(milliseconds: 400));
 
-      final context = _commentsSectionKey.currentContext;
-      if (context != null) {
+      final commentsContext = _commentsSectionKey.currentContext;
+      if (commentsContext != null) {
         await Scrollable.ensureVisible(
-          context,
+          commentsContext,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
           alignment: 0.05,
@@ -393,5 +427,4 @@ class _PostDetailPageState extends State<PostDetailPage> {
       }
     });
   }
-
 }

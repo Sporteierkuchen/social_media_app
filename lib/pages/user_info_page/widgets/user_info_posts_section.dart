@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../../../models/PostDto.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/post_repository.dart';
@@ -9,10 +10,9 @@ import '../../../widgets/PostWidget.dart';
 enum UserMediaFilter { all, videos, images }
 
 class UserInfoPostsSection extends StatefulWidget {
-  final UserDto userData;    // Profilbesitzer
-  final UserDto viewerData;  // aktueller Viewer
+  final UserDto userData;
+  final UserDto viewerData;
   final PostRepository postRepository;
-
   final int pageSize;
 
   const UserInfoPostsSection({
@@ -27,32 +27,64 @@ class UserInfoPostsSection extends StatefulWidget {
   State<UserInfoPostsSection> createState() => _UserInfoPostsSectionState();
 }
 
-class _UserInfoPostsSectionState extends State<UserInfoPostsSection> {
-
+class _UserInfoPostsSectionState extends State<UserInfoPostsSection>
+    with AutomaticKeepAliveClientMixin {
   UserMediaFilter _filter = UserMediaFilter.all;
+  bool _fetchTriggered = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  void _triggerFetchMoreIfNeeded(
+      FirestoreQueryBuilderSnapshot<Map<String, dynamic>> snapshot,
+      ) {
+    if (!snapshot.hasMore) return;
+    if (snapshot.isFetchingMore) return;
+    if (_fetchTriggered) return;
+
+    _fetchTriggered = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      snapshot.fetchMore();
+
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) {
+          _fetchTriggered = false;
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     final userId = widget.userData.userid!;
     final type = _typeForFilter(_filter);
 
-    final Query<Map<String, dynamic>> query = widget.postRepository.userPostsQuery(
+    final Query<Map<String, dynamic>> query =
+    widget.postRepository.userPostsQuery(
       userId: userId,
       type: type,
     );
 
+    final displayName =
+    "${widget.userData.vorname} ${widget.userData.nachname}".trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ---- Titel + Live-Count ----
         StreamBuilder<int>(
           stream: _countStreamForFilter(_filter),
           builder: (context, snap) {
             final countText = snap.hasData ? "${snap.data}" : "…";
+
             return Padding(
               padding: const EdgeInsets.only(top: 40),
               child: Text(
-                "${_titleForFilter(_filter)} von ${widget.userData.vorname} ${widget.userData.nachname} ($countText)",
+                "${_titleForFilter(_filter)} von $displayName ($countText)",
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -65,7 +97,6 @@ class _UserInfoPostsSectionState extends State<UserInfoPostsSection> {
 
         const SizedBox(height: 10),
 
-        // ---- Filter (Alle / Videos / Bilder) ----
         Row(
           children: [
             _FilterChip(
@@ -90,11 +121,8 @@ class _UserInfoPostsSectionState extends State<UserInfoPostsSection> {
 
         const SizedBox(height: 10),
 
-        // ---- Paging + Realtime ----
         FirestoreQueryBuilder<Map<String, dynamic>>(
-          // Wenn du sicherstellen willst, dass beim Wechsel “frisch” geladen wird,
-          // hilft ein Key, damit der Builder neu startet:
-          key: ValueKey("${userId}_${type ?? "all"}"),
+          key: ValueKey("user_info_posts_${userId}_${type ?? "all"}"),
           query: query,
           pageSize: widget.pageSize,
           builder: (context, snapshot, _) {
@@ -121,43 +149,49 @@ class _UserInfoPostsSectionState extends State<UserInfoPostsSection> {
               );
             }
 
+            final posts = snapshot.docs
+                .map((doc) => PostDto.fromSnapshot(doc))
+                .toList();
+
             return ListView.builder(
+              key: PageStorageKey<String>(
+                'user_info_posts_list_${userId}_${type ?? "all"}',
+              ),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.docs.length + 1,
+              cacheExtent: 1800,
+              addAutomaticKeepAlives: true,
+              addRepaintBoundaries: true,
+              itemCount:
+              posts.length + (snapshot.hasMore || snapshot.isFetchingMore ? 1 : 0),
               itemBuilder: (context, index) {
-                // Load more row
-                if (index == snapshot.docs.length) {
-                  if (!snapshot.hasMore) return const SizedBox(height: 20);
+                if (index >= posts.length - 2) {
+                  _triggerFetchMoreIfNeeded(snapshot);
+                }
 
-                  if (snapshot.isFetchingMore) {
-                    return const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Center(
+                if (index >= posts.length) {
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 12),
+                    child: Center(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
                         child: CircularProgressIndicator(color: Colors.white),
-                      ),
-                    );
-                  }
-
-                  return Center(
-                    child: TextButton(
-                      onPressed: snapshot.fetchMore,
-                      child: const Text(
-                        "Mehr laden",
-                        style: TextStyle(color: Colors.grey),
                       ),
                     ),
                   );
                 }
 
-                final doc = snapshot.docs[index];
-                final post = PostDto.fromSnapshot(doc);
+                final post = posts[index];
 
-                return PostWidget(
-                  post: post,
-                  userId: widget.viewerData.userid,
-                  userRole: widget.viewerData.role ?? "USER",
-                  postRepository: widget.postRepository,
+                return RepaintBoundary(
+                  child: PostWidget(
+                    key: ValueKey(post.id),
+                    post: post,
+                    userId: widget.viewerData.userid,
+                    userRole: widget.viewerData.role ?? "USER",
+                    postRepository: widget.postRepository,
+                  ),
                 );
               },
             );
@@ -200,7 +234,6 @@ class _UserInfoPostsSectionState extends State<UserInfoPostsSection> {
         return widget.postRepository.userPostCountStream(id);
     }
   }
-
 }
 
 class _FilterChip extends StatelessWidget {
@@ -218,17 +251,17 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
         decoration: BoxDecoration(
           color: active ? Colors.orange : Colors.grey[800],
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.white24),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Text(
           label,
           style: TextStyle(
-            height: 0,
             fontWeight: FontWeight.bold,
             color: active ? Colors.black : Colors.white,
             fontSize: 14,
