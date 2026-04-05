@@ -12,8 +12,7 @@ import '../../../services/local_notification_service.dart';
 import '../../user_info_page/UserInfoPage.dart';
 
 class ChatPage extends StatefulWidget {
-
-  static const String routeName = "chat_page"; // 👈 NEU
+  static const String routeName = "chat_page";
 
   final String? chatId;
   final UserDto me;
@@ -53,7 +52,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       _scheduleMarkRead();
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await LocalNotificationService.clearChatNotifications(_chatId!);
+        try {
+          await LocalNotificationService.clearChatNotifications(_chatId!);
+        } catch (e, s) {
+          debugPrint("[ChatPage] Fehler beim Löschen der Notifications: $e");
+          debugPrint("$s");
+        }
       });
     }
   }
@@ -106,8 +110,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     if (uid == null) return;
 
-    if (cid != null &&
-        ChatStateService.currentOpenChatId == cid) {
+    if (cid != null && ChatStateService.currentOpenChatId == cid) {
       ChatStateService.currentOpenChatId = null;
     }
 
@@ -164,7 +167,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       if (_chatId != null) {
         ChatStateService.currentOpenChatId = _chatId;
         await _setActiveChat();
-        await LocalNotificationService.clearChatNotifications(_chatId!);
+
+        try {
+          await LocalNotificationService.clearChatNotifications(_chatId!);
+        } catch (e, s) {
+          debugPrint("[ChatPage] Fehler beim Löschen der Notifications nach Chat-Erstellung: $e");
+          debugPrint("$s");
+        }
       }
 
       setState(() {});
@@ -306,8 +315,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                             isOnline ? "online" : _lastSeenLabel(lastActiveAt),
                             style: TextStyle(
                               fontSize: 12,
-                              color:
-                              isOnline ? Colors.orange : Colors.white54,
+                              color: isOnline ? Colors.orange : Colors.white54,
                               height: 1.0,
                             ),
                           ),
@@ -354,6 +362,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         ),
                       );
                     }
+
                     if (snap.isFetching && snap.docs.isEmpty) {
                       return const Center(
                         child: CircularProgressIndicator(
@@ -391,11 +400,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         final doc = docs[index];
                         final data = doc.data();
 
-                        final isMe =
-                            data["senderId"] == widget.me.userid;
+                        final isMe = data["senderId"] == widget.me.userid;
                         final text = (data["text"] ?? "").toString();
-                        final createdAt =
-                        data["createdAt"] as Timestamp?;
+                        final createdAt = data["createdAt"] as Timestamp?;
 
                         final thisDay = _dateOnlyFromTs(createdAt);
 

@@ -1,16 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:social_media_app/pages/chat_page/chat/presence_observer.dart';
+
 import '../../../models/UserDto.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../repositories/chat_repository.dart';
 import '../../../repositories/user_repository.dart';
-import '../../../services/local_notification_service.dart';
 import 'chat_page.dart';
 import 'new_chat_page.dart';
 
 class ChatListPage extends StatelessWidget {
-
   final ChatRepository _chatRepo = ChatRepository();
   final UserRepository _userRepo = UserRepository();
   final AuthRepository _authRepo = AuthRepository();
@@ -27,7 +26,6 @@ class ChatListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final myUid = _authRepo.currentUserId;
 
     return PresenceObserver(
@@ -49,9 +47,19 @@ class ChatListPage extends StatelessWidget {
           ],
         ),
         body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _chatRepo.myChatsQuery(myUid!).snapshots(),
+          stream: myUid == null ? null : _chatRepo.myChatsQuery(myUid).snapshots(),
           builder: (context, snap) {
+            if (myUid == null) {
+              return const Center(
+                child: Text(
+                  "Kein eingeloggter Benutzer gefunden",
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
             if (snap.hasError) {
+              debugPrint("[ChatListPage] Fehler beim Laden der Chats: ${snap.error}");
               return const Center(
                 child: Text(
                   "Fehler beim Laden",
@@ -59,9 +67,15 @@ class ChatListPage extends StatelessWidget {
                 ),
               );
             }
-            if (!snap.hasData) return const SizedBox.shrink();
+
+            if (!snap.hasData) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
 
             final chats = snap.data!.docs;
+
             if (chats.isEmpty) {
               return const Center(
                 child: Text(
@@ -96,7 +110,6 @@ class ChatListPage extends StatelessWidget {
                     (data['unreadCounts'] as Map?)?.cast<String, dynamic>() ?? {};
                 final unread = (unreadCounts[myUid] ?? 0) as int;
 
-                // ✅ WhatsApp-Style: Badge eher nur wenn letzte Nachricht nicht von mir kam
                 final showUnread = unread > 0 && lastSenderId != myUid;
 
                 return StreamBuilder<UserDto?>(
@@ -108,8 +121,10 @@ class ChatListPage extends StatelessWidget {
                     final username = other?.benutzername ?? "User";
 
                     return ListTile(
-                      contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       leading: CircleAvatar(
                         radius: 22,
                         backgroundColor: Colors.grey.shade800,
@@ -120,7 +135,10 @@ class ChatListPage extends StatelessWidget {
                       ),
                       title: Text(
                         username,
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -149,7 +167,9 @@ class ChatListPage extends StatelessWidget {
                             Text(
                               _formatTime(lastMessageAt),
                               style: const TextStyle(
-                                  color: Colors.white54, fontSize: 12),
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
                             ),
                           const SizedBox(height: 6),
                           if (showUnread) _UnreadBadge(count: unread),
@@ -158,22 +178,44 @@ class ChatListPage extends StatelessWidget {
                       onTap: () async {
                         final chatId = chats[i].id;
 
-                        final me = await _userRepo.getUserDetailsDto(myUid);
-                        if (me == null || other == null) return;
-                        if (!context.mounted) return;
+                        try {
+                          final me = await _userRepo.getUserDetailsDto(myUid);
 
-                        await LocalNotificationService.clearChatNotifications(chatId);
+                          if (me == null) {
+                            debugPrint("[ChatListPage] Abbruch: eigene Benutzerdaten sind null");
+                            return;
+                          }
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatPage(
-                              chatId: chatId,
-                              me: me,
-                              other: other,
+                          UserDto? otherUser = other;
+
+                          if (otherUser == null) {
+                            otherUser = await _userRepo.getUserDetailsDto(otherUid);
+                          }
+
+                          if (otherUser == null) {
+                            debugPrint("[ChatListPage] Abbruch: anderer Benutzer konnte nicht geladen werden");
+                            return;
+                          }
+
+                          if (!context.mounted) {
+                            debugPrint("[ChatListPage] Context nicht mehr mounted");
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatPage(
+                                chatId: chatId,
+                                me: me,
+                                other: otherUser!,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        } catch (e, s) {
+                          debugPrint("[ChatListPage] Fehler beim Öffnen des Chats: $e");
+                          debugPrint("$s");
+                        }
                       },
                     );
                   },
@@ -229,7 +271,6 @@ class _TickPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!show) return const SizedBox.shrink();
 
-    // ✅ otherReadAt >= lastMessageAt
     final bool read = (lastMessageAt != null &&
         otherReadAt != null &&
         !otherReadAt!.toDate().isBefore(lastMessageAt!.toDate()));

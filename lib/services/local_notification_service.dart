@@ -329,12 +329,23 @@ class LocalNotificationService {
     _chatSenderNames.remove(chatId);
     _chatLastBodies.remove(chatId);
 
-    await _plugin.cancel(_chatNotificationId(chatId));
+    try {
+      await _plugin.cancel(_chatNotificationId(chatId));
+    } catch (e, s) {
+      debugPrint("Fehler cancel chat notification: $e");
+      debugPrint("$s");
+    }
 
     if (_chatMessageCounts.isEmpty) {
-      await _plugin.cancel(_chatSummaryId);
+      try {
+        await _plugin.cancel(_chatSummaryId);
+      } catch (e, s) {
+        debugPrint("Fehler cancel summary notification: $e");
+        debugPrint("$s");
+      }
     } else {
       await _showChatSummary();
     }
   }
+
 }
