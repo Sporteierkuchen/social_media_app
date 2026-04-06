@@ -134,54 +134,54 @@ class UserInfoPageState extends State<UserInfoPage>
                       ),
                       userRepository: _userRepository,
                     ),
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
+
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        top: 8,
+                        bottom: 24,
                       ),
-                      color: Colors.black,
-                      margin: EdgeInsets.zero,
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                          left: 20,
-                          right: 20,
-                          top: 10,
-                          bottom: 20,
+                      decoration: const BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(18),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            UserInfoDetailsSection(
-                              userData: userData,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          UserInfoDetailsSection(
+                            userData: userData,
+                          ),
+                          UserInfoPostsSection(
+                            userData: userData,
+                            viewerData: _viewerData!,
+                            postRepository: _postRepository,
+                            pageSize: 10,
+                          ),
+                          UserInfoSubscribersSection(
+                            userData: userData,
+                            viewerData: _viewerData!,
+                            subscribersQuery: _userRepository.subscribersQuery(
+                              widget.userID,
                             ),
-                            UserInfoPostsSection(
-                              userData: userData,
-                              viewerData: _viewerData!,
-                              postRepository: _postRepository,
-                              pageSize: 10,
+                            subscribersCountStream: _userRepository.subscribersCountStream(
+                              widget.userID,
                             ),
-                            UserInfoSubscribersSection(
-                              userData: userData,
-                              viewerData: _viewerData!,
-                              subscribersQuery:
-                              _userRepository.subscribersQuery(
-                                widget.userID,
-                              ),
-                              subscribersCountStream:
-                              _userRepository.subscribersCountStream(
-                                widget.userID,
-                              ),
-                              userRepository: _userRepository,
-                            ),
-                            UserInfoRoleSection(
-                              userData: userData,
-                              viewerData: _viewerData!,
-                              userRepository: _userRepository,
-                            ),
-                          ],
-                        ),
+                            userRepository: _userRepository,
+                          ),
+                          UserInfoRoleSection(
+                            userData: userData,
+                            viewerData: _viewerData!,
+                            userRepository: _userRepository,
+                          ),
+                        ],
                       ),
                     ),
+
                   ],
                 );
               },

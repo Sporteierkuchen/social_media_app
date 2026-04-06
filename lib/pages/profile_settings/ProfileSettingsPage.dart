@@ -36,8 +36,8 @@ class ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final uid = _authRepository.currentUserId;
 
-    final uid = _authRepository.currentUserId; // oder FirebaseAuth.instance.currentUser?.uid
     if (uid == null) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -50,111 +50,99 @@ class ProfilePageState extends State<ProfilePage> {
       );
     }
 
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          child: StreamBuilder<UserDto?>(
-            stream: _userRepository.userStream(uid),
-            builder: (context, snapshot) {
-
-              if (snapshot.hasError) {
-                return const Center(
-                  child: Text("Fehler beim Laden", style: TextStyle(color: Colors.red)),
-                );
-              }
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const ProfileLoading();
-              }
-
-              if (!snapshot.hasData || snapshot.data == null) {
-                return const Center(
-                  child: Text("Benutzer nicht gefunden", style: TextStyle(color: Colors.white)),
-                );
-              }
-
-              final userdata = snapshot.data!;
-
-              return SingleChildScrollView(
-                child: Stack(
-                  children: [
-
-                    ProfileHeaderSection(
-                      userdata: userdata,
-                      userRepository: _userRepository,
-                    ),
-
-                    // The card widget with top padding,
-                    // incase if you wanted bottom padding to work,
-                    // set the `alignment` of container to Alignment.bottomCenter
-                    Container(
-                      //color: Colors.black,
-                      alignment: Alignment.topCenter,
-                      padding: EdgeInsets.only(
-                        top: MediaQuery.of(context).size.height * .45,
-                        right: 0,
-                        left: 0,
-                      ),
-                      child: Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                        color: Colors.black,
-                        margin: const EdgeInsets.only(
-                          left: 0,
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                        ),
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 20, right: 20),
-                          child: Column(
-                            children: [
-
-                              AboutMeSection(
-                                userData: userdata,
-                                userRepository: _userRepository, // ✅ UserDto
-                              ),
-
-                              // 2) Persönliche Daten (Adresse etc.)
-                              PersonalDataSection(
-                                userData: userdata,
-                                userRepository: _userRepository,
-                              ),
-
-                              // 3) E-Mail-Bereich
-                              EmailSection(
-                                userData: userdata,
-                                authRepository: _authRepository,
-                                userRepository: _userRepository,
-                              ),
-
-                              // 4) Passwort-Bereich
-                              PasswordSection(
-                                userData: userdata,
-                                userRepository:_userRepository,
-                                authRepository: _authRepository,
-                              ),
-
-                              // 5) Logout-Button
-                              LogoutButton(
-                                authRepository: _authRepository,
-                              ),
-
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: StreamBuilder<UserDto?>(
+          stream: _userRepository.userStream(uid),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text(
+                  "Fehler beim Laden",
+                  style: TextStyle(color: Colors.red),
                 ),
               );
+            }
 
-            },
-          ),
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const ProfileLoading();
+            }
+
+            if (!snapshot.hasData || snapshot.data == null) {
+              return const Center(
+                child: Text(
+                  "Benutzer nicht gefunden",
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            }
+
+            final userdata = snapshot.data!;
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// 🔹 HEADER
+                  ProfileHeaderSection(
+                    userdata: userdata,
+                    userRepository: _userRepository,
+                  ),
+
+                  /// 🔹 CONTENT (ohne äußere Card!)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Column(
+                      children: [
+                        AboutMeSection(
+                          userData: userdata,
+                          userRepository: _userRepository,
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        PersonalDataSection(
+                          userData: userdata,
+                          userRepository: _userRepository,
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        EmailSection(
+                          userData: userdata,
+                          authRepository: _authRepository,
+                          userRepository: _userRepository,
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        PasswordSection(
+                          userData: userdata,
+                          userRepository: _userRepository,
+                          authRepository: _authRepository,
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        LogoutButton(
+                          authRepository: _authRepository,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
         ),
-      );
+      ),
+    );
   }
 
 }

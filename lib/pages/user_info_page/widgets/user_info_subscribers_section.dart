@@ -12,7 +12,6 @@ class UserInfoSubscribersSection extends StatelessWidget {
   final UserDto viewerData;
   final UserRepository userRepository;
 
-  // ✅ von außen
   final Query<Map<String, dynamic>> subscribersQuery;
   final Stream<int> subscribersCountStream;
 
@@ -28,20 +27,25 @@ class UserInfoSubscribersSection extends StatelessWidget {
     required this.userRepository,
   });
 
+  String get _displayName {
+    final fullName = "${userData.vorname ?? ''} ${userData.nachname ?? ''}".trim();
+    return fullName.isNotEmpty ? fullName : "diesem Nutzer";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ---- Titel + Live-Count ----
         Padding(
-          padding: const EdgeInsets.only(top: 40, bottom: 10),
+          padding: const EdgeInsets.only(top: 40, bottom: 12),
           child: StreamBuilder<int>(
             stream: subscribersCountStream,
             builder: (context, snap) {
               final countText = snap.hasData ? "${snap.data}" : "…";
+
               return Text(
-                "Abonnenten von ${userData.vorname} ${userData.nachname} ($countText)",
+                "Abonnenten von $_displayName ($countText)",
                 style: const TextStyle(
                   fontSize: 22,
                   color: Colors.white,
@@ -51,25 +55,39 @@ class UserInfoSubscribersSection extends StatelessWidget {
             },
           ),
         ),
-
-        // ---- Realtime + Paging ----
         FirestoreQueryBuilder<Map<String, dynamic>>(
           query: subscribersQuery,
           pageSize: pageSize,
           builder: (context, snapshot, _) {
             if (snapshot.isFetching && snapshot.docs.isEmpty) {
-              return const Center(child: CircularProgressIndicator(color: Colors.white));
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              );
             }
+
             if (snapshot.hasError) {
               return Text(
                 "Fehler beim Laden der Abonnenten: ${snapshot.error}",
                 style: const TextStyle(color: Colors.red),
               );
             }
+
             if (snapshot.docs.isEmpty) {
-              return const Text(
-                "Noch keine Abonnenten vorhanden.",
-                style: TextStyle(color: Colors.white70),
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF171717),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Text(
+                  "Noch keine Abonnenten vorhanden.",
+                  style: TextStyle(color: Colors.white70),
+                ),
               );
             }
 
@@ -78,29 +96,39 @@ class UserInfoSubscribersSection extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: snapshot.docs.length + 1,
               itemBuilder: (context, index) {
-                // Load more row
                 if (index == snapshot.docs.length) {
-                  if (!snapshot.hasMore) return const SizedBox(height: 20);
+                  if (!snapshot.hasMore) {
+                    return const SizedBox(height: 10);
+                  }
 
                   if (snapshot.isFetchingMore) {
                     return const Padding(
                       padding: EdgeInsets.all(12),
-                      child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
                     );
                   }
 
                   return Center(
-                    child: TextButton(
-                      onPressed: snapshot.fetchMore,
-                      child: const Text("Mehr laden"),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6, bottom: 10),
+                      child: TextButton(
+                        onPressed: snapshot.fetchMore,
+                        child: const Text(
+                          "Mehr laden",
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
                     ),
                   );
                 }
 
-                final doc = snapshot.docs[index]; // QueryDocumentSnapshot<Map<String, dynamic>>
-                final abbonent = SubscriptionDto.fromSnapshot(doc); // siehe unten
+                final doc = snapshot.docs[index];
+                final abbonent = SubscriptionDto.fromSnapshot(doc);
 
                 return AbbonentWidget(
+                  key: ValueKey(doc.id),
                   abbonent: abbonent,
                   viewerData: viewerData,
                   userRepository: userRepository,

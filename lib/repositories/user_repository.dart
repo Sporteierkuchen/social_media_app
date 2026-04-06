@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_cropper/image_cropper.dart';
 
 import '../models/SubscriptionDto.dart';
@@ -247,6 +248,24 @@ class UserRepository {
       return true;
     } catch (e) {
       print('Fehler beim Hochladen des Profilbilds: $e');
+      return false;
+    }
+  }
+
+  Future<bool> uploadBackgroundImage(CroppedFile file, String userId) async {
+    try {
+      final ref = _storage.ref().child('background_images').child('$userId.jpg');
+
+      await ref.putFile(File(file.path));
+      final url = await ref.getDownloadURL();
+
+      await _users.doc(userId).update({
+        'backgroundImageUrl': url,
+      });
+
+      return true;
+    } catch (e) {
+      debugPrint("uploadBackgroundImage Fehler: $e");
       return false;
     }
   }

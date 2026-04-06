@@ -22,6 +22,7 @@ class AuthRepository {
   /// Stream, um auf Login/Logout zu reagieren (z. B. in einer Wrapper-Page)
   // 👇 WICHTIG: als Getter, nicht als Methode
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get userChanges => _auth.userChanges();
 
   /// aktuell eingeloggter User (kann null sein)
   User? get currentUser => _auth.currentUser;
@@ -195,6 +196,10 @@ class AuthRepository {
     }
   }
 
+  Future<User?> reloadCurrentUser() async {
+    await _auth.currentUser?.reload();
+    return _auth.currentUser;
+  }
 
   // ------------------------------------------------------------
   // Passwort-Zurücksetzen

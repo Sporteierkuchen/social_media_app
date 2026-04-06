@@ -6,10 +6,8 @@ class TextInput extends StatelessWidget {
   final bool obscureText;
   final TextEditingController controller;
 
-  /// Icon flexibel (Icon, Image, etc.)
   final Widget? prefixIcon;
 
-  // Optionales Verhalten
   final TextInputAction textInputAction;
   final TextInputType keyboardType;
   final int? maxLength;
@@ -17,9 +15,6 @@ class TextInput extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
-  // -------------------------
-  // 🎨 Styling (mit Defaults)
-  // -------------------------
   final Color cursorColor;
 
   final Color textColor;
@@ -43,47 +38,56 @@ class TextInput extends StatelessWidget {
     required this.obscureText,
     required this.controller,
     this.prefixIcon,
-
     this.textInputAction = TextInputAction.next,
     this.keyboardType = TextInputType.text,
     this.maxLength,
     this.onChanged,
     this.onSubmitted,
 
-    // ✅ Defaults: neutral/hell (passt überall, auch bisher)
+    // Dunkles UI als Standard
     this.cursorColor = AppColors.primary,
 
-    this.textColor = Colors.black,
-    this.labelColor = const Color(0xFF777777),
-    this.hintColor = const Color(0xFF999999),
-    this.iconColor = const Color(0xFF777777),
+    this.textColor = Colors.white,
+    this.labelColor = const Color(0xFFBDBDBD),
+    this.hintColor = const Color(0xFF8F8F8F),
+    this.iconColor = const Color(0xFFD0D0D0),
 
-    this.fillColor = const Color(0xFFE6E6E6),
+    this.fillColor = const Color(0xFF222222),
 
-    this.enabledBorderColor = const Color(0xFFCCCCCC),
+    this.enabledBorderColor = const Color(0xFF3A3A3A),
     this.focusedBorderColor = AppColors.primary,
     this.errorBorderColor = Colors.redAccent,
 
-    this.borderRadius = 12,
-    this.borderWidth = 1.5,
-    this.contentPadding = const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    this.borderRadius = 14,
+    this.borderWidth = 1.4,
+    this.contentPadding =
+    const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
   });
 
   @override
   Widget build(BuildContext context) {
     final borderEnabled = OutlineInputBorder(
       borderRadius: BorderRadius.circular(borderRadius),
-      borderSide: BorderSide(color: enabledBorderColor, width: borderWidth),
+      borderSide: BorderSide(
+        color: enabledBorderColor,
+        width: borderWidth,
+      ),
     );
 
     final borderFocused = OutlineInputBorder(
       borderRadius: BorderRadius.circular(borderRadius),
-      borderSide: BorderSide(color: focusedBorderColor, width: borderWidth),
+      borderSide: BorderSide(
+        color: focusedBorderColor,
+        width: borderWidth,
+      ),
     );
 
     final borderError = OutlineInputBorder(
       borderRadius: BorderRadius.circular(borderRadius),
-      borderSide: BorderSide(color: errorBorderColor, width: borderWidth),
+      borderSide: BorderSide(
+        color: errorBorderColor,
+        width: borderWidth,
+      ),
     );
 
     return TextFormField(
@@ -93,6 +97,7 @@ class TextInput extends StatelessWidget {
       style: TextStyle(
         color: textColor,
         fontSize: 16,
+        height: 1.2,
       ),
       textInputAction: textInputAction,
       keyboardType: keyboardType,
@@ -101,18 +106,41 @@ class TextInput extends StatelessWidget {
       onFieldSubmitted: onSubmitted,
       decoration: InputDecoration(
         counterText: maxLength != null ? "" : null,
-        prefixIcon: prefixIcon == null
-            ? null
-            : IconTheme(
-          data: IconThemeData(color: iconColor),
-          child: prefixIcon!,
-        ),
         labelText: label,
-        labelStyle: TextStyle(color: labelColor),
-        hintStyle: TextStyle(color: hintColor),
+        labelStyle: TextStyle(
+          color: labelColor,
+          fontSize: 15,
+        ),
+        floatingLabelStyle: TextStyle(
+          color: focusedBorderColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+        hintStyle: TextStyle(
+          color: hintColor,
+          fontSize: 15,
+        ),
         filled: true,
         fillColor: fillColor,
         contentPadding: contentPadding,
+
+        prefixIcon: prefixIcon == null
+            ? null
+            : Padding(
+          padding: const EdgeInsets.only(left: 10, right: 4),
+          child: IconTheme(
+            data: IconThemeData(
+              color: iconColor,
+              size: 20,
+            ),
+            child: prefixIcon!,
+          ),
+        ),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 44,
+          minHeight: 44,
+        ),
+
         enabledBorder: borderEnabled,
         focusedBorder: borderFocused,
         errorBorder: borderError,

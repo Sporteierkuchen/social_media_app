@@ -13,6 +13,7 @@ class UserDto {
   final String? plz;
   final String? stadt;
   final String? profilePictureUrl;
+  final String? backgroundImageUrl;
   final Timestamp? timestamp;      // aus Firestore
 
   UserDto({
@@ -28,6 +29,7 @@ class UserDto {
     this.plz,
     this.stadt,
     this.profilePictureUrl,
+    this.backgroundImageUrl,
     this.timestamp,
   });
 
@@ -46,6 +48,7 @@ class UserDto {
       plz: map['plz'] as String?,
       stadt: map['stadt'] as String?,
       profilePictureUrl: map['profilePictureUrl'] as String?,
+      backgroundImageUrl: map['backgroundImageUrl'] as String?,
       timestamp: map['timestamp'] as Timestamp?,
     );
   }
@@ -72,6 +75,7 @@ class UserDto {
       'plz': plz,
       'stadt': stadt,
       'profilePictureUrl': profilePictureUrl,
+      'backgroundImageUrl': backgroundImageUrl,
       'timestamp': timestamp,
     };
   }

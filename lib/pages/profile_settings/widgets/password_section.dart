@@ -1,12 +1,12 @@
-// lib/pages/profile_settings/widgets/password_section.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../../models/Meldung.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../repositories/user_repository.dart';
 import '../../../util/HelperUtil.dart';
-import '../../../widgets/TextInput.dart' as Textfeld;
+import '../../../widgets/TextInput.dart' as textfeld;
 
 class PasswordSection extends StatefulWidget {
   final UserDto userData;
@@ -40,168 +40,197 @@ class _PasswordSectionState extends State<PasswordSection> {
 
   @override
   Widget build(BuildContext context) {
-    return isEditing ? _buildEditMode(context) : _buildViewMode();
-  }
-
-  // =========================
-  // VIEW MODE
-  // =========================
-  Widget _buildViewMode() {
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-      margin: const EdgeInsets.only(bottom: 15),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 25, right: 10, top: 20, bottom: 25),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Textbereich
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Passwort',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  '********',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-
-            // Edit-Icon
-            Padding(
-              padding: const EdgeInsets.only(left: 10, right: 15, top: 20, bottom: 20),
-              child: GestureDetector(
-                onTap: _onEdit,
-                child: const Icon(Icons.edit_outlined, color: Colors.orange, size: 30),
-              ),
-            ),
-          ],
-        ),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 18, bottom: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
+      child: isEditing ? _buildEditMode(context) : _buildViewMode(),
     );
   }
 
-  // =========================
-  // EDIT MODE
-  // =========================
+  Widget _buildViewMode() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Passwort',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 22,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Sicherheit',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                '********',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: InkWell(
+            onTap: _onEdit,
+            borderRadius: BorderRadius.circular(999),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(
+                Icons.edit_outlined,
+                color: Colors.orange,
+                size: 22,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEditMode(BuildContext context) {
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-      margin: const EdgeInsets.only(bottom: 15),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 10, top: 20, bottom: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Passwort ändern',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 22,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              textfeld.TextInput(
+                label: "Neues Passwort",
+                obscureText: true,
+                controller: newPasswordController,
+                prefixIcon: const Icon(Icons.password),
+              ),
+              const SizedBox(height: 14),
+              textfeld.TextInput(
+                label: "Neues Passwort wiederholen",
+                obscureText: true,
+                controller: repeatPasswordController,
+                prefixIcon: const Icon(Icons.password_outlined),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Passwort ändern',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 18,
-                    ),
+            if (isLoading)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            else ...[
+              GestureDetector(
+                onTap: _onCancel,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
                   ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Neues Passwort",
-                    obscureText: true,
-                    controller: newPasswordController,
-                    prefixIcon: const Icon(Icons.password, color: Colors.white),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
                   ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Neues Passwort wiederholen",
-                    obscureText: true,
-                    controller: repeatPasswordController,
-                    prefixIcon: const Icon(Icons.password, color: Colors.white),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      isLoading
-                          ? const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                      )
-                          : ElevatedButton(
-                        onPressed: _onSavePassword,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.green,
-                          side: const BorderSide(color: Colors.white, width: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.save, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              'Speichern',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      ElevatedButton(
-                        onPressed: _onCancel,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.white, width: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.cancel_outlined, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              'Abbrechen',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                      Icon(Icons.close, color: Colors.white, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Abbrechen',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: _onSavePassword,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orangeAccent),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.save_outlined, color: Colors.black, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Speichern',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
-      ),
+      ],
     );
   }
 
-  // =========================
-  // ACTIONS
-  // =========================
   void _onEdit() {
     newPasswordController.clear();
     repeatPasswordController.clear();
@@ -225,7 +254,6 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Bitte gib dein neues Passwort ein und wiederhole es.",
         ),
-
       );
       return false;
     }
@@ -236,7 +264,6 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Das Passwort muss mindestens 6 Zeichen lang sein.",
         ),
-
       );
       return false;
     }
@@ -247,7 +274,6 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Die Passwörter stimmen nicht überein.",
         ),
-
       );
       return false;
     }
@@ -263,7 +289,10 @@ class _PasswordSectionState extends State<PasswordSection> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Text("Altes Passwort bestätigen", style: TextStyle(color: Colors.white)),
+          title: const Text(
+            "Altes Passwort bestätigen",
+            style: TextStyle(color: Colors.white),
+          ),
           content: TextField(
             controller: controller,
             obscureText: true,
@@ -299,13 +328,14 @@ class _PasswordSectionState extends State<PasswordSection> {
     final user = widget.authRepository.currentUser;
     if (user == null) {
       HelperUtil.getToast(
-        meldung: Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-
+        meldung: Meldung(
+          meldungsart: Meldungsart.ERROR,
+          text: "Nicht eingeloggt.",
+        ),
       );
       return;
     }
 
-    // ✅ ReAuth braucht das alte Passwort -> Dialog
     final oldPassword = await _askCurrentPassword();
     if (oldPassword == null) return;
 
@@ -314,21 +344,13 @@ class _PasswordSectionState extends State<PasswordSection> {
     final newPw = newPasswordController.text.trim();
 
     try {
-      debugPrint("[PasswordSection] ReAuth + updatePassword");
-
       final credential = EmailAuthProvider.credential(
         email: user.email ?? '',
         password: oldPassword,
       );
 
       await user.reauthenticateWithCredential(credential);
-
       await user.updatePassword(newPw);
-
-      // Optional: Falls du serverseitig/DB noch was spiegeln willst:
-      // -> Bitte NICHT in Firestore speichern. Wenn du es wirklich brauchst,
-      // mach’s sicher in deinem Backend.
-      // await widget.userRepository.updatePasswordInBackend(newPw, user.uid);
 
       if (!mounted) return;
 
@@ -337,20 +359,42 @@ class _PasswordSectionState extends State<PasswordSection> {
           meldungsart: Meldungsart.SUCCESS,
           text: "Passwort wurde geändert!",
         ),
-
       );
 
       setState(() => isEditing = false);
     } catch (e) {
       if (!mounted) return;
       HelperUtil.getToast(
-        meldung: Meldung(meldungsart: Meldungsart.ERROR, text: e.toString()),
-
+        meldung: Meldung(
+          meldungsart: Meldungsart.ERROR,
+          text: e.toString(),
+        ),
       );
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
+}
 
+class _InfoCard extends StatelessWidget {
+  final Widget child;
+
+  const _InfoCard({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1D1D1D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: child,
+    );
+  }
 }

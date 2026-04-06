@@ -1,12 +1,11 @@
-
 import 'package:flutter/material.dart';
+
 import '../../../../widgets/TextInput.dart';
 import '../../../models/Meldung.dart';
 import '../../../repositories/post_repository.dart';
 import '../../../util/HelperUtil.dart';
 
 class AddCategorySection extends StatefulWidget {
-
   final PostRepository postRepository;
 
   const AddCategorySection({
@@ -19,55 +18,85 @@ class AddCategorySection extends StatefulWidget {
 }
 
 class _AddCategorySectionState extends State<AddCategorySection> {
-
   final TextEditingController _categoryController = TextEditingController();
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _categoryController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: TextInput(
-            label: "Kategorie",
+    return Container(
+      margin: const EdgeInsets.only(top: 40),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Kategorie hinzufügen",
+            style: TextStyle(
+              fontSize: 22,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextInput(
+            label: "Neue Kategorie",
             obscureText: false,
             controller: _categoryController,
             prefixIcon: const Icon(Icons.add),
           ),
-        ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10, right: 10, top: 20),
-            child: GestureDetector(
-              onTap: () async {
-                await _addCategory();
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  color: Colors.grey[800],
-                ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _isSaving
+                ? const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
+            )
+                : GestureDetector(
+              onTap: _addCategory,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 5,
+                  horizontal: 16,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.orangeAccent,
+                  ),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.add,
-                      size: 30,
-                      color: Colors.green,
+                      size: 20,
+                      color: Colors.black,
                     ),
-                    SizedBox(width: 5),
+                    SizedBox(width: 8),
                     Text(
-                      "Kategorie hinzufügen",
-                      softWrap: true,
+                      "Hinzufügen",
                       style: TextStyle(
-                        height: 0,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 20,
+                        color: Colors.black,
+                        fontSize: 15,
                       ),
                     ),
                   ],
@@ -75,14 +104,16 @@ class _AddCategorySectionState extends State<AddCategorySection> {
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Future<void> _addCategory() async {
     final categoryName = _categoryController.text.trim();
-    if (categoryName.isEmpty) return;
+    if (categoryName.isEmpty || _isSaving) return;
+
+    setState(() => _isSaving = true);
 
     try {
       await widget.postRepository.addCategory(categoryName);
@@ -93,16 +124,18 @@ class _AddCategorySectionState extends State<AddCategorySection> {
         meldung: Meldung(
           meldungsart: Meldungsart.SUCCESS,
           text: "Kategorie erfolgreich hinzugefügt!",
-        )
+        ),
       );
     } catch (e) {
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Hinzufügen der Kategorie:\n$e",
-        )
+        ),
       );
+    } finally {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
     }
   }
-
 }

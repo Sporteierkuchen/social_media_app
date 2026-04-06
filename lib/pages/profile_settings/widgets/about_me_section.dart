@@ -1,5 +1,5 @@
-// lib/pages/profile_settings/widgets/about_me_section.dart
 import 'package:flutter/material.dart';
+
 import '../../../models/Meldung.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/user_repository.dart';
@@ -7,7 +7,6 @@ import '../../../util/FormatUtil.dart';
 import '../../../util/HelperUtil.dart';
 
 class AboutMeSection extends StatefulWidget {
-
   final UserDto userData;
   final UserRepository userRepository;
 
@@ -22,8 +21,8 @@ class AboutMeSection extends StatefulWidget {
 }
 
 class _AboutMeSectionState extends State<AboutMeSection> {
-
-  final TextEditingController beschreibungTextController = TextEditingController();
+  final TextEditingController beschreibungTextController =
+  TextEditingController();
 
   bool beschreibungAendern = false;
   bool isLoading = false;
@@ -31,8 +30,17 @@ class _AboutMeSectionState extends State<AboutMeSection> {
   @override
   void initState() {
     super.initState();
-    // initial aus Firestore-Daten setzen
     beschreibungTextController.text = widget.userData.beschreibung ?? '';
+  }
+
+  @override
+  void didUpdateWidget(covariant AboutMeSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!beschreibungAendern &&
+        oldWidget.userData.beschreibung != widget.userData.beschreibung) {
+      beschreibungTextController.text = widget.userData.beschreibung ?? '';
+    }
   }
 
   @override
@@ -43,215 +51,278 @@ class _AboutMeSectionState extends State<AboutMeSection> {
 
   @override
   Widget build(BuildContext context) {
-    final nickname = widget.userData.benutzername ?? "";
+    final nickname = (widget.userData.benutzername ?? "").trim();
     final memberSince = widget.userData.timestamp;
-    final beschreibung = widget.userData.beschreibung ?? "";
+    final beschreibung = (widget.userData.beschreibung ?? "").trim();
 
     final textToShow = beschreibungTextController.text.trim().isNotEmpty
-        ? beschreibungTextController.text
+        ? beschreibungTextController.text.trim()
         : beschreibung;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 15, bottom: 25),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 18, bottom: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nickname
-          Padding(
-            padding: const EdgeInsets.only(left: 10, right: 10),
-            child: Text(
-              nickname,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 30,
-                height: 0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+          const Text(
+            "Profiltext",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
 
-          // Mitglied seit
-          if (memberSince != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              child: Text(
-                "Mitglied seit ${FormatUtil.formatDate(memberSince.toDate())}",
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 0,
-                  fontWeight: FontWeight.normal,
-                  color: Colors.white70,
+          const SizedBox(height: 14),
+
+          _InfoCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _SectionLabel("Benutzername"),
+                const SizedBox(height: 6),
+                Text(
+                  nickname.isNotEmpty ? nickname : "Kein Benutzername",
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
+                if (memberSince != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    "Mitglied seit ${FormatUtil.formatDate(memberSince.toDate())}",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          beschreibungAendern ? _buildEditMode(context) : _buildViewMode(textToShow),
+          beschreibungAendern
+              ? _buildEditMode(context)
+              : _buildViewMode(textToShow),
         ],
       ),
     );
   }
 
   Widget _buildViewMode(String textToShow) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Titel + Edit-Icon
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "Über mich",
-              style: TextStyle(
-                fontSize: 20,
-                height: 0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            GestureDetector(
-              onTap: isLoading
-                  ? null
-                  : () {
-                setState(() => beschreibungAendern = true);
-              },
-              child: const Icon(
-                Icons.edit_outlined,
-                color: Colors.orange,
-                size: 30,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        Text(
-          textToShow,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 0,
-            fontWeight: FontWeight.normal,
-            color: Colors.white70,
-          ),
-        ),
-      ],
-    );
-  }
+    final content = textToShow.trim().isNotEmpty
+        ? textToShow.trim()
+        : "Noch keine Beschreibung hinterlegt.";
 
-  Widget _buildEditMode(BuildContext context) {
-    return Column(
-      children: [
-        const Row(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: Text(
-                "Über mich",
-                style: TextStyle(
-                  fontSize: 20,
-                  height: 0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        TextFormField(
-          controller: beschreibungTextController,
-          maxLines: 5,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.grey[900],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: const BorderSide(color: Colors.white, width: 2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: const BorderSide(color: Colors.white, width: 2),
-            ),
-            hintText: 'Schreibe etwas über dich...',
-            hintStyle: const TextStyle(color: Colors.white54),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-          ),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-          ),
-        ),
+    final hasContent = textToShow.trim().isNotEmpty;
 
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return _InfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              isLoading
-                  ? const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-              )
-                  : ElevatedButton(
-                onPressed: _saveAboutMe,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.green,
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5),
+              const Expanded(
+                child: Text(
+                  "Über mich",
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.save, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text(
-                      'Speichern',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
                 ),
               ),
-
-              ElevatedButton(
-                onPressed: isLoading ? null : _cancelAboutMeEdit,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.white, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5),
+              InkWell(
+                onTap: isLoading
+                    ? null
+                    : () {
+                  setState(() => beschreibungAendern = true);
+                },
+                borderRadius: BorderRadius.circular(999),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.edit_outlined,
+                    color: Colors.orange,
+                    size: 22,
                   ),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.cancel_outlined, color: Colors.white),
-                    SizedBox(width: 6),
-                    Text(
-                      'Abbrechen',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
                 ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          Text(
+            content,
+            style: TextStyle(
+              fontSize: 15,
+              color: hasContent ? Colors.white : Colors.white60,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // =========================
-  // ✅ DEINE Methoden jetzt IN der Section
-  // =========================
+  Widget _buildEditMode(BuildContext context) {
+    return _InfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Über mich bearbeiten",
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: beschreibungTextController,
+            maxLines: 5,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFF222222),
+              hintText: 'Schreibe etwas über dich...',
+              hintStyle: const TextStyle(color: Colors.white54),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 14,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Colors.white12,
+                  width: 1.2,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Colors.orange,
+                  width: 1.6,
+                ),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (isLoading)
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              else ...[
+                GestureDetector(
+                  onTap: _cancelAboutMeEdit,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          "Abbrechen",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: _saveAboutMe,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orangeAccent),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.save_outlined,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          "Speichern",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   void _cancelAboutMeEdit() {
-    debugPrint("[AboutMeSection] Cancel edit");
     setState(() {
       beschreibungTextController.text = widget.userData.beschreibung ?? '';
       beschreibungAendern = false;
@@ -264,7 +335,6 @@ class _AboutMeSectionState extends State<AboutMeSection> {
     setState(() => isLoading = true);
 
     final newText = beschreibungTextController.text.trim();
-    debugPrint("[AboutMeSection] Save about me (len=${newText.length}) user=${widget.userData.userid}");
 
     try {
       final success = await widget.userRepository.updateUserBeschreibung(
@@ -280,7 +350,6 @@ class _AboutMeSectionState extends State<AboutMeSection> {
             meldungsart: Meldungsart.SUCCESS,
             text: "Die Beschreibung wurde erfolgreich aktualisiert!",
           ),
-
         );
 
         setState(() => beschreibungAendern = false);
@@ -290,7 +359,6 @@ class _AboutMeSectionState extends State<AboutMeSection> {
             meldungsart: Meldungsart.ERROR,
             text: "Beschreibung konnte nicht gespeichert werden.",
           ),
-
         );
       }
     } catch (e) {
@@ -300,13 +368,51 @@ class _AboutMeSectionState extends State<AboutMeSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Speichern:\n$e",
         ),
-
       );
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
-
     }
   }
+}
 
+class _InfoCard extends StatelessWidget {
+  final Widget child;
+
+  const _InfoCard({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1D1D1D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.white70,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
 }

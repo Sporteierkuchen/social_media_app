@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/UserDto.dart';
 import '../../../util/FormatUtil.dart';
 
@@ -10,131 +11,248 @@ class ProfileInfoSection extends StatelessWidget {
     required this.userData,
   });
 
+  String get _fullName {
+    return "${userData.vorname ?? ''} ${userData.nachname ?? ''}".trim();
+  }
+
+  String get _username {
+    return (userData.benutzername ?? '').trim();
+  }
+
+  String get _description {
+    return (userData.beschreibung ?? '').trim();
+  }
+
+  String get _streetLine {
+    final street = (userData.strase ?? '').trim();
+    final houseNumber = (userData.hausnummer ?? '').trim();
+    return "$street $houseNumber".trim();
+  }
+
+  String get _cityLine {
+    final zip = (userData.plz ?? '').trim();
+    final city = (userData.stadt ?? '').trim();
+    return "$zip $city".trim();
+  }
+
   @override
   Widget build(BuildContext context) {
-
     final timestamp = userData.timestamp;
     final mitgliedSeit = timestamp?.toDate();
 
-    return
+    final bool hasStreet = _streetLine.isNotEmpty;
+    final bool hasCity = _cityLine.isNotEmpty;
+    final bool hasLocation = hasStreet || hasCity;
+    final bool hasDescription = _description.isNotEmpty;
 
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Center(
-            child: Text(
-              "Benutzername",
-              style: TextStyle(fontSize: 16, height: 0, color: Colors.white),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+
+        const Text(
+          "Profilinformationen",
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10, right: 10, bottom: 0),
-              child: Text(
-                userData.benutzername ?? "",
-                textAlign: TextAlign.center,
+        ),
+
+        const SizedBox(height: 14),
+
+        _InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionLabel("Benutzername"),
+              const SizedBox(height: 6),
+              Text(
+                _username.isEmpty ? "Kein Benutzername" : _username,
                 style: const TextStyle(
-                  fontSize: 30,
-                  height: 0,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-            ),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              child: Text(
-                mitgliedSeit != null
-                    ? "Mitglied seit ${FormatUtil.formatDate(mitgliedSeit)}"
-                    : "",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, height: 0, color: Colors.white),
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.only(top: 15),
-            child: Text(
-              "Über ${userData.vorname ?? ''} ${userData.nachname ?? ''}",
-              style: const TextStyle(
-                fontSize: 20,
-                height: 0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 5, bottom: 25),
-            child: Text(
-              userData.beschreibung ?? "",
-              style: const TextStyle(fontSize: 16, height: 0, color: Colors.white),
-            ),
-          ),
-
-          if (userData.strase?.toString().trim().isNotEmpty ?? false)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(right: 5),
-                  child: Text(
-                    "Straße:",
-                    textAlign: TextAlign.left,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    "${userData.strase ?? ''} ${userData.hausnummer ?? ''}",
-                    textAlign: TextAlign.left,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 0,
-                      fontWeight: FontWeight.normal,
-                      color: Colors.white,
-                    ),
+              if (mitgliedSeit != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  "Mitglied seit ${FormatUtil.formatDate(mitgliedSeit)}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
-            ),
+            ],
+          ),
+        ),
 
-          (userData.stadt?.toString().trim().isNotEmpty ?? false)
-              ? Row(
+        const SizedBox(height: 12),
+
+        _InfoCard(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.only(right: 5),
-                child: Text(
-                  "Stadt:",
+              Text(
+                _fullName.isEmpty ? "Über mich" : "Über $_fullName",
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                hasDescription
+                    ? _description
+                    : "Noch keine Beschreibung hinterlegt.",
+                style: TextStyle(
+                  fontSize: 15,
+                  color: hasDescription ? Colors.white : Colors.white60,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        if (hasLocation) ...[
+          const SizedBox(height: 12),
+          _InfoCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Standort",
                   style: TextStyle(
-                    fontSize: 16,
-                    height: 0,
+                    fontSize: 19,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
+                const SizedBox(height: 12),
+                if (hasStreet)
+                  _InfoRow(
+                    icon: Icons.home_outlined,
+                    label: "Straße",
+                    value: _streetLine,
+                  ),
+                if (hasStreet && hasCity) const SizedBox(height: 10),
+                if (hasCity)
+                  _InfoRow(
+                    icon: Icons.location_city_outlined,
+                    label: "Ort",
+                    value: _cityLine,
+                  ),
+              ],
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final Widget child;
+
+  const _InfoCard({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.white70,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          color: Colors.orange,
+          size: 18,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              Expanded(
-                child: Text(
-                  "${userData.plz ?? ''} ${userData.stadt ?? ''}",
-                  style: const TextStyle(fontSize: 16, height: 0, color: Colors.white),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.white,
+                  height: 1.35,
                 ),
               ),
             ],
-          )
-              : const SizedBox.shrink(),
-        ],
-      );
-
+          ),
+        ),
+      ],
+    );
   }
-
 }

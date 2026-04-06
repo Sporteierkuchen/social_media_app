@@ -125,65 +125,67 @@ class PersonalInfoPageState extends State<PersonalInfoPage>
                   subscribersCountStream:
                   _userRepository.subscribersCountStream(userData.userid!),
                 ),
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 8,
+                    bottom: 24,
                   ),
-                  color: Colors.black,
-                  margin: EdgeInsets.zero,
-                  elevation: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: 10,
-                      bottom: 20,
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(18),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ProfileInfoSection(
-                          userData: userData,
-                        ),
-                        MyPostsSection(
-                          userData: userData,
-                          postRepository: _postRepository,
-                          pageSize: 10,
-                        ),
-                        MySubscribersSection(
-                          userData: userData,
-                          subscribersQuery:
-                          _userRepository.subscribersQuery(userData.userid!),
-                          subscribersCountStream: _userRepository
-                              .subscribersCountStream(userData.userid!),
-                          userRepository: _userRepository,
-                        ),
-                        SubscribedSection(
-                          userData: userData,
-                          subscribedQuery:
-                          _userRepository.subscribedQuery(userData.userid!),
-                          subscribersCountStream: _userRepository
-                              .subscribedCountStream(userData.userid!),
-                          userRepository: _userRepository,
-                        ),
-                        UserOverviewSection(
-                          userRepository: _userRepository,
-                          viewerData: userData,
-                        ),
-                        userrole == "ADMIN" || userrole == "OWNER"
-                            ? CategoryOverviewSection(
-                          postRepository: _postRepository,
-                        )
-                            : const SizedBox.shrink(),
-                        userrole == "ADMIN" || userrole == "OWNER"
-                            ? AddCategorySection(
-                          postRepository: _postRepository,
-                        )
-                            : const SizedBox.shrink(),
-                      ],
-                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ProfileInfoSection(
+                        userData: userData,
+                      ),
+                      MyPostsSection(
+                        userData: userData,
+                        postRepository: _postRepository,
+                        pageSize: 10,
+                      ),
+                      MySubscribersSection(
+                        userData: userData,
+                        subscribersQuery:
+                        _userRepository.subscribersQuery(userData.userid!),
+                        subscribersCountStream:
+                        _userRepository.subscribersCountStream(userData.userid!),
+                        userRepository: _userRepository,
+                      ),
+                      SubscribedSection(
+                        userData: userData,
+                        subscribedQuery:
+                        _userRepository.subscribedQuery(userData.userid!),
+                        subscribersCountStream:
+                        _userRepository.subscribedCountStream(userData.userid!),
+                        userRepository: _userRepository,
+                      ),
+                      UserOverviewSection(
+                        userRepository: _userRepository,
+                        viewerData: userData,
+                      ),
+                      userrole == "ADMIN" || userrole == "OWNER"
+                          ? CategoryOverviewSection(
+                        postRepository: _postRepository,
+                      )
+                          : const SizedBox.shrink(),
+                      userrole == "ADMIN" || userrole == "OWNER"
+                          ? AddCategorySection(
+                        postRepository: _postRepository,
+                      )
+                          : const SizedBox.shrink(),
+                    ],
                   ),
                 ),
+
               ],
             ),
           ),

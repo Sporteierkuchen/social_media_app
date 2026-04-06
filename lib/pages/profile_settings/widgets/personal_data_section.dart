@@ -1,10 +1,10 @@
-// lib/pages/profile_settings/widgets/personal_data_section.dart
 import 'package:flutter/material.dart';
+
 import '../../../models/Meldung.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/user_repository.dart';
 import '../../../util/HelperUtil.dart';
-import '../../../widgets/TextInput.dart' as Textfeld;
+import '../../../widgets/TextInput.dart' as textfeld;
 
 class PersonalDataSection extends StatefulWidget {
   final UserDto userData;
@@ -38,6 +38,14 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
   }
 
   @override
+  void didUpdateWidget(covariant PersonalDataSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!isEditing && oldWidget.userData != widget.userData) {
+      _fillControllersFromUser();
+    }
+  }
+
+  @override
   void dispose() {
     vornameController.dispose();
     nachnameController.dispose();
@@ -59,12 +67,26 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
 
   @override
   Widget build(BuildContext context) {
-    return isEditing ? _buildEditMode(context) : _buildViewMode();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 18, bottom: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: isEditing ? _buildEditMode(context) : _buildViewMode(),
+    );
   }
 
-  // =========================
-  // VIEW MODE
-  // =========================
   Widget _buildViewMode() {
     final vorname = widget.userData.vorname ?? '';
     final nachname = widget.userData.nachname ?? '';
@@ -73,195 +95,220 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
     final plz = widget.userData.plz ?? '';
     final stadt = widget.userData.stadt ?? '';
 
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-      margin: const EdgeInsets.only(bottom: 15),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 25, right: 10, top: 20, bottom: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Persönliche Daten',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+    final fullName = '$vorname $nachname'.trim();
+    final addressLine = '$strasse $hausnummer'.trim();
+    final cityLine = '$plz $stadt'.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Persönliche Daten',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 22,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionLabel("Name"),
+              const SizedBox(height: 6),
+              Text(
+                fullName.isNotEmpty ? fullName : "Keine Angaben",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  '$vorname $nachname'.trim(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+              ),
+              const SizedBox(height: 14),
+              const _SectionLabel("Adresse"),
+              const SizedBox(height: 6),
+              Text(
+                addressLine.isNotEmpty ? addressLine : "Keine Straße hinterlegt",
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  height: 1.35,
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  '$strasse $hausnummer'.trim(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                cityLine.isNotEmpty ? cityLine : "Kein Ort hinterlegt",
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  height: 1.35,
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  '$plz $stadt'.trim(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 10, right: 15, top: 20, bottom: 20),
-              child: GestureDetector(
-                onTap: _onEdit,
-                child: const Icon(Icons.edit_outlined, color: Colors.orange, size: 30),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: InkWell(
+            onTap: _onEdit,
+            borderRadius: BorderRadius.circular(999),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(
+                Icons.edit_outlined,
+                color: Colors.orange,
+                size: 22,
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  // =========================
-  // EDIT MODE
-  // =========================
   Widget _buildEditMode(BuildContext context) {
-    return Card(
-      color: Colors.grey[900],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-      margin: const EdgeInsets.only(bottom: 15),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 10, top: 20, bottom: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Persönliche Daten bearbeiten',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 22,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              textfeld.TextInput(
+                label: "Vorname",
+                obscureText: false,
+                controller: vornameController,
+                prefixIcon: const Icon(Icons.person),
+              ),
+              const SizedBox(height: 14),
+              textfeld.TextInput(
+                label: "Nachname",
+                obscureText: false,
+                controller: nachnameController,
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+              const SizedBox(height: 14),
+              textfeld.TextInput(
+                label: "Straße",
+                obscureText: false,
+                controller: strasseController,
+                prefixIcon: const Icon(Icons.streetview),
+              ),
+              const SizedBox(height: 14),
+              textfeld.TextInput(
+                label: "Hausnummer",
+                obscureText: false,
+                controller: hausnummerController,
+                prefixIcon: const Icon(Icons.numbers),
+              ),
+              const SizedBox(height: 14),
+              textfeld.TextInput(
+                label: "Postleitzahl",
+                obscureText: false,
+                controller: plzController,
+                prefixIcon: const Icon(Icons.markunread_mailbox_outlined),
+              ),
+              const SizedBox(height: 14),
+              textfeld.TextInput(
+                label: "Stadt",
+                obscureText: false,
+                controller: stadtController,
+                prefixIcon: const Icon(Icons.location_city),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Persönliche Daten',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 22,
-                    ),
+            if (isLoading)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            else ...[
+              GestureDetector(
+                onTap: _onCancel,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
                   ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Vorname",
-                    obscureText: false,
-                    controller: vornameController,
-                    prefixIcon: const Icon(Icons.person, color: Colors.white),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
                   ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Nachname",
-                    obscureText: false,
-                    controller: nachnameController,
-                    prefixIcon: const Icon(Icons.person, color: Colors.white),
-                  ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Straße",
-                    obscureText: false,
-                    controller: strasseController,
-                    prefixIcon: const Icon(Icons.streetview, color: Colors.white),
-                  ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Hausnummer",
-                    obscureText: false,
-                    controller: hausnummerController,
-                    prefixIcon: const Icon(Icons.numbers, color: Colors.white),
-                  ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Postleitzahl",
-                    obscureText: false,
-                    controller: plzController,
-                    prefixIcon: const Icon(Icons.post_add, color: Colors.white),
-                  ),
-                  const SizedBox(height: 15),
-
-                  Textfeld.TextInput(
-                    label: "Stadt",
-                    obscureText: false,
-                    controller: stadtController,
-                    prefixIcon: const Icon(Icons.home, color: Colors.white),
-                  ),
-                  const SizedBox(height: 15),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      isLoading
-                          ? const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                      )
-                          : ElevatedButton(
-                        onPressed: _onSave,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.green,
-                          side: const BorderSide(color: Colors.white, width: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.save, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              'Speichern',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: _onCancel,
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.white, width: 2),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.cancel_outlined, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              'Abbrechen',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                      Icon(Icons.close, color: Colors.white, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Abbrechen',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: _onSave,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orangeAccent),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.save_outlined, color: Colors.black, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Speichern',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
-      ),
+      ],
     );
   }
 
-  // =========================
-  // ACTIONS (intern wie AboutMe)
-  // =========================
   void _onEdit() {
     _fillControllersFromUser();
     setState(() => isEditing = true);
@@ -283,7 +330,6 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
           meldungsart: Meldungsart.WARNING,
           text: "Vorname und Nachname dürfen nicht leer sein.",
         ),
-
       );
       return false;
     }
@@ -301,7 +347,6 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler: Benutzer-ID fehlt.",
         ),
-
       );
       return;
     }
@@ -309,8 +354,6 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
     setState(() => isLoading = true);
 
     try {
-      debugPrint("[PersonalDataSection] updateUserProfile -> uid=$uid");
-
       final updated = await widget.userRepository.updateUserProfile(
         UserDto(
           userid: uid,
@@ -331,7 +374,6 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
             meldungsart: Meldungsart.SUCCESS,
             text: "Die Daten wurden erfolgreich aktualisiert!",
           ),
-
         );
         setState(() => isEditing = false);
       } else {
@@ -340,7 +382,6 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
             meldungsart: Meldungsart.ERROR,
             text: "Die Daten konnten nicht gespeichert werden.",
           ),
-
         );
       }
     } catch (e) {
@@ -350,12 +391,51 @@ class _PersonalDataSectionState extends State<PersonalDataSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Speichern:\n$e",
         ),
-
       );
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
+}
 
+class _InfoCard extends StatelessWidget {
+  final Widget child;
+
+  const _InfoCard({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1D1D1D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.white70,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
 }

@@ -1,5 +1,6 @@
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
 import '../../../models/Meldung.dart';
 import '../../../models/SubscriptionDto.dart';
 import '../../../models/UserDto.dart';
@@ -11,7 +12,6 @@ class AbboniertWidget extends StatefulWidget {
   final SubscriptionDto abbonent;
   final UserDto viewerData;
   final UserRepository userRepository;
-
   final void Function(String text, Meldungsart art)? onMessage;
 
   const AbboniertWidget({
@@ -29,197 +29,275 @@ class AbboniertWidget extends StatefulWidget {
 class _AbboniertWidgetState extends State<AbboniertWidget> {
   bool canInteract = true;
 
+  String get _targetId => widget.abbonent.subscribedToId;
+
+  String get _profileImageUrl =>
+      widget.abbonent.subscriberToProfilePic.trim();
+
+  String get _displayName {
+    final value = widget.abbonent.subscriberToName.trim();
+    return value.isNotEmpty ? value : "Unbekannter Nutzer";
+  }
+
+  String get _realName {
+    return "${widget.abbonent.subscriberToVorname} ${widget.abbonent.subscriberToNachname}"
+        .trim();
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    final targetId = widget.abbonent.subscribedToId;
-
-    return GestureDetector(
-      onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => UserInfoPage(
-              userID: targetId,
-              viewerID: widget.viewerData.userid!,
+    final content = Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => UserInfoPage(
+                  userID: _targetId,
+                  viewerID: widget.viewerData.userid!,
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildAvatar(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildNameSection(),
+                ),
+                const SizedBox(width: 8),
+                _buildRoleIcon(),
+                if (!_isSelf(_targetId)) ...[
+                  const SizedBox(width: 8),
+                  _buildSubscribeButton(),
+                ],
+              ],
             ),
           ),
+        ),
+      ),
+    );
+
+    if (_isSelf(_targetId)) {
+      return content;
+    }
+
+    return StreamBuilder<bool>(
+      stream: widget.userRepository.isSubscribedStream(
+        viewerId: widget.viewerData.userid!,
+        targetId: _targetId,
+      ),
+      builder: (context, snap) {
+        final subscribed = snap.data ?? false;
+
+        return Dismissible(
+          key: ValueKey("subscribed_${widget.abbonent.subscribedToId}"),
+          direction:
+          subscribed ? DismissDirection.endToStart : DismissDirection.none,
+          confirmDismiss: (direction) async {
+            if (!subscribed || !canInteract) return false;
+
+            await _toggleAbo(
+              subscribed: true,
+              targetId: _targetId,
+            );
+            return false;
+          },
+          background: Container(
+            alignment: Alignment.centerRight,
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.person_remove_alt_1, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  "Deabonnieren",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child: content,
         );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    );
+  }
 
-            // Profilbild
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(120),
-                child: Image.network(
-                  widget.abbonent.subscriberToProfilePic,
-                  fit: BoxFit.cover,
-                  width: 60,
-                  height: 60,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.asset(
-                      "assets/images/page/empty.png",
-                      fit: BoxFit.cover,
-                      width: 60,
-                      height: 60,
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // Name / Vorname Nachname
-            Expanded(
-              flex: 55,
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: 12,
-                  bottom: 12,
-                  left: 15,
-                  right: 5,
-                ),
-                child: Column(
-                  children: [
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.abbonent.subscriberToName,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              height: 0,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "${widget.abbonent.subscriberToVorname} ${widget.abbonent.subscriberToNachname}",
-                              style: const TextStyle(
-                                fontSize: 14,
-                                height: 0,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Role Icon
-            Padding(
-              padding: const EdgeInsets.only(
-                  top: 12, bottom: 12, right: 10, left: 3),
-              child: HelperUtil.getUserIcon(widget.abbonent.subscriberToRole),
-            ),
-
-            // Subscribe Button
-            !_isSelf(targetId)
-                ? Expanded(
-              flex: 45,
-              child: StreamBuilder<bool>(
-                stream: widget.userRepository.isSubscribedStream(
-                  viewerId: widget.viewerData.userid!,
-                  targetId: targetId,
-                ),
-                builder: (context, snap) {
-
-                  final subscribed = snap.data ?? false;
-
-                  if (snap.connectionState ==
-                      ConnectionState.waiting &&
-                      !snap.hasData) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: SizedBox(
-                          width: 25,
-                          height: 25,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 3),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return canInteract
-                      ? Padding(
-                    padding:
-                    const EdgeInsets.symmetric(vertical: 12),
-                    child: GestureDetector(
-                      onTap: () async {
-                        await _toggleAbo(
-                            subscribed: subscribed,
-                            targetId: targetId);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: subscribed
-                              ? Colors.black
-                              : Colors.indigo[900],
-                          border: subscribed
-                              ? Border.all(
-                              color: Colors.white, width: 1)
-                              : Border.all(
-                              color: Colors.transparent),
-                        ),
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 8),
-                        child: Text(
-                          subscribed
-                              ? "Deabbonieren"
-                              : "Abbonieren",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                      : const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: SizedBox(
-                        width: 25,
-                        height: 25,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 3),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            )
-                : const SizedBox.shrink(),
-          ],
+  Widget _buildAvatar() {
+    return Container(
+      width: 62,
+      height: 62,
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: _profileImageUrl.isNotEmpty
+            ? CachedNetworkImage(
+          imageUrl: _profileImageUrl,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Image.asset(
+            "assets/images/page/empty.png",
+            fit: BoxFit.cover,
+          ),
+          errorWidget: (context, url, error) => Image.asset(
+            "assets/images/page/empty.png",
+            fit: BoxFit.cover,
+          ),
+        )
+            : Image.asset(
+          "assets/images/page/empty.png",
+          fit: BoxFit.cover,
         ),
+      ),
+    );
+  }
+
+  Widget _buildNameSection() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  _displayName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
+                ),
+              ),
+
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _realName.isNotEmpty ? _realName : "Kein Klarname",
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.white70,
+              height: 1.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleIcon() {
+    return SizedBox(
+      height: 24,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: HelperUtil.getUserIcon(widget.abbonent.subscriberToRole),
+      ),
+    );
+  }
+
+  Widget _buildSubscribeButton() {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: 100,
+        maxWidth: 118,
+      ),
+      child: StreamBuilder<bool>(
+        stream: widget.userRepository.isSubscribedStream(
+          viewerId: widget.viewerData.userid!,
+          targetId: _targetId,
+        ),
+        builder: (context, snap) {
+          final subscribed = snap.data ?? false;
+
+          if ((snap.connectionState == ConnectionState.waiting &&
+              !snap.hasData) ||
+              !canInteract) {
+            return const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            );
+          }
+
+          return GestureDetector(
+            onTap: () async {
+              await _toggleAbo(
+                subscribed: subscribed,
+                targetId: _targetId,
+              );
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: subscribed ? Colors.black : Colors.orange,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: subscribed ? Colors.white24 : Colors.orangeAccent,
+                ),
+              ),
+              child: Text(
+                subscribed ? "Abonniert" : "Abonnieren",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: subscribed ? Colors.white : Colors.black,
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -232,7 +310,6 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
     required bool subscribed,
     required String targetId,
   }) async {
-
     if (!canInteract) return;
 
     setState(() => canInteract = false);
@@ -242,13 +319,11 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
     final vorname = widget.abbonent.subscriberToVorname;
     final nachname = widget.abbonent.subscriberToNachname;
     final benutzername = widget.abbonent.subscriberToName;
-    final profilePic = widget.abbonent.subscriberToProfilePic;
+    final profilePic = widget.abbonent.subscriberToProfilePic.trim();
     final role = widget.abbonent.subscriberToRole;
 
     try {
-
       if (subscribed) {
-
         final success = await widget.userRepository.unsubscribe(
           viewerId: viewerId,
           userId: targetId,
@@ -256,18 +331,17 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
 
         if (success) {
           widget.onMessage?.call(
-            "Du hast $vorname $nachname deabboniert!",
+            "Du hast $vorname $nachname deabonniert!",
             Meldungsart.INFO,
           );
         }
-
       } else {
-
         final viewerDataMap = {
           'benutzername': widget.viewerData.benutzername ?? '',
           'vorname': widget.viewerData.vorname ?? '',
           'nachname': widget.viewerData.nachname ?? '',
-          'profilePictureUrl': widget.viewerData.profilePictureUrl ?? '',
+          'profilePictureUrl':
+          (widget.viewerData.profilePictureUrl ?? '').trim(),
           'role': widget.viewerData.role ?? 'USER',
         };
 
@@ -288,24 +362,19 @@ class _AbboniertWidgetState extends State<AbboniertWidget> {
 
         if (success) {
           widget.onMessage?.call(
-            "Du hast $vorname $nachname abboniert!",
+            "Du hast $vorname $nachname abonniert!",
             Meldungsart.SUCCESS,
           );
         }
       }
-
     } catch (e) {
-
       widget.onMessage?.call(
-        "Fehler beim Abbonieren:\n$e",
+        "Fehler beim Abonnieren:\n$e",
         Meldungsart.ERROR,
       );
-
     } finally {
-
       if (!mounted) return;
       setState(() => canInteract = true);
-
     }
   }
 }

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/Meldung.dart';
@@ -28,19 +27,18 @@ class SubscribedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parentContext = context; // <- stabileren Context merken
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 40, bottom: 10),
+          padding: const EdgeInsets.only(top: 40, bottom: 12),
           child: StreamBuilder<int>(
             stream: subscribersCountStream,
             builder: (context, snap) {
               final countText = snap.hasData ? "${snap.data}" : "…";
+
               return Text(
-                "Abboniert ($countText)",
+                "Abonniert ($countText)",
                 style: const TextStyle(
                   fontSize: 22,
                   color: Colors.white,
@@ -50,28 +48,39 @@ class SubscribedSection extends StatelessWidget {
             },
           ),
         ),
-
         FirestoreQueryBuilder<Map<String, dynamic>>(
           query: subscribedQuery,
           pageSize: pageSize,
           builder: (context, snapshot, _) {
             if (snapshot.isFetching && snapshot.docs.isEmpty) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
               );
             }
 
             if (snapshot.hasError) {
               return Text(
-                "Fehler beim Laden Abos: ${snapshot.error}",
+                "Fehler beim Laden der Abos: ${snapshot.error}",
                 style: const TextStyle(color: Colors.red),
               );
             }
 
             if (snapshot.docs.isEmpty) {
-              return const Text(
-                "Noch nieamanden abboniert!.",
-                style: TextStyle(color: Colors.white70),
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF171717),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Text(
+                  "Noch niemanden abonniert.",
+                  style: TextStyle(color: Colors.white70),
+                ),
               );
             }
 
@@ -81,7 +90,9 @@ class SubscribedSection extends StatelessWidget {
               itemCount: snapshot.docs.length + 1,
               itemBuilder: (context, index) {
                 if (index == snapshot.docs.length) {
-                  if (!snapshot.hasMore) return const SizedBox(height: 20);
+                  if (!snapshot.hasMore) {
+                    return const SizedBox(height: 10);
+                  }
 
                   if (snapshot.isFetchingMore) {
                     return const Padding(
@@ -93,9 +104,15 @@ class SubscribedSection extends StatelessWidget {
                   }
 
                   return Center(
-                    child: TextButton(
-                      onPressed: snapshot.fetchMore,
-                      child: const Text("Mehr laden"),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6, bottom: 10),
+                      child: TextButton(
+                        onPressed: snapshot.fetchMore,
+                        child: const Text(
+                          "Mehr laden",
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -114,7 +131,6 @@ class SubscribedSection extends StatelessWidget {
                         meldungsart: art,
                         text: text,
                       ),
-
                     );
                   },
                 );

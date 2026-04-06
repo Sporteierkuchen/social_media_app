@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/Meldung.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../services/PushService.dart';
@@ -7,7 +8,10 @@ import '../../../services/navigation_service.dart';
 import '../../../util/HelperUtil.dart';
 
 class LogoutButton extends StatefulWidget {
-  const LogoutButton({super.key, required this.authRepository});
+  const LogoutButton({
+    super.key,
+    required this.authRepository,
+  });
 
   final AuthRepository authRepository;
 
@@ -20,33 +24,91 @@ class _LogoutButtonState extends State<LogoutButton> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("[LoginPage] build()");
-    return Padding(
-      padding: const EdgeInsets.only(top: 15, bottom: 15),
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _logout,
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white,
-          backgroundColor: Colors.red,
-          side: const BorderSide(color: Colors.white, width: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 18, bottom: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Sitzung",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-        )
-            : const Text(
-          'Ausloggen',
-          style: TextStyle(fontSize: 25),
-        ),
+          const SizedBox(height: 8),
+          const Text(
+            "Melde dich sicher von deinem Konto ab. Du kannst dich danach jederzeit wieder anmelden.",
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: isLoading
+                ? const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+                : GestureDetector(
+              onTap: _logout,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.redAccent,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.logout_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Ausloggen',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -86,10 +148,8 @@ class _LogoutButtonState extends State<LogoutButton> {
         ),
       );
 
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (!mounted) return;
+      setState(() => isLoading = false);
     }
   }
-
 }

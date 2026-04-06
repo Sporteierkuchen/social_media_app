@@ -1,20 +1,22 @@
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
 import '../../../models/Meldung.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/user_repository.dart';
 import '../../../util/HelperUtil.dart';
 
 class UserInfoHeader extends StatefulWidget {
-  // ✅ Streams von außen
   final UserDto userData;
   final UserDto viewerData;
+
   final Stream<int> videoCountStream;
   final Stream<int> imageCountStream;
   final Stream<int> videoViewsStream;
   final Stream<int> imageViewsStream;
   final Stream<int> subscribersCountStream;
   final Stream<bool> isSubscribedStream;
+
   final UserRepository userRepository;
 
   const UserInfoHeader({
@@ -28,7 +30,6 @@ class UserInfoHeader extends StatefulWidget {
     required this.subscribersCountStream,
     required this.isSubscribedStream,
     required this.userRepository,
-
   });
 
   @override
@@ -36,262 +37,365 @@ class UserInfoHeader extends StatefulWidget {
 }
 
 class _UserInfoHeaderState extends State<UserInfoHeader> {
-
   bool canInteract = true;
+
+  String get _displayName {
+    return "${widget.userData.vorname ?? ''} ${widget.userData.nachname ?? ''}"
+        .trim();
+  }
+
+  String get _subTitle {
+    if ((widget.userData.benutzername ?? '').trim().isNotEmpty) {
+      return widget.userData.benutzername!.trim();
+    }
+    return _displayName;
+  }
+
+  bool get _hasProfileImage {
+    return (widget.userData.profilePictureUrl ?? '').trim().isNotEmpty;
+  }
+
+  bool get _hasBackgroundImage {
+    return (widget.userData.backgroundImageUrl ?? '').trim().isNotEmpty;
+  }
+
+  bool get _isOwnProfile {
+    return widget.userData.userid == widget.viewerData.userid;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final double bannerHeight = mediaQuery.size.height * 0.5;
+    final double avatarSize = 200;
+
     return Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.only(left: 10, right: 10, top: 40, bottom: 20),
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage("assets/images/page/background.png"),
-          fit: BoxFit.cover,
-        ),
-      ),
+      color: Colors.black,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Profilbild
           Container(
-            padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(120),
-              child: (widget.userData.profilePictureUrl != null &&
-                  widget.userData.profilePictureUrl!.isNotEmpty)
-                  ? Image.network(
-                widget.userData.profilePictureUrl!,
-                fit: BoxFit.cover,
-                width: 240,
-                height: 240,
-                errorBuilder: (_, __, ___) => Image.asset(
-                  "assets/images/page/empty.png",
-                  fit: BoxFit.cover,
-                  width: 240,
-                  height: 240,
-                ),
-              )
-                  : Image.asset(
-                "assets/images/page/empty.png",
-                fit: BoxFit.cover,
-                width: 240,
-                height: 240,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Color(0xFF101010),
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(28),
               ),
             ),
-          ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: bannerHeight,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: _hasBackgroundImage
+                            ? CachedNetworkImage(
+                          imageUrl: widget.userData.backgroundImageUrl!.trim(),
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Image.asset(
+                            "assets/images/page/background.png",
+                            fit: BoxFit.cover,
+                          ),
+                          errorWidget: (context, url, error) =>
+                              Image.asset(
+                                "assets/images/page/background.png",
+                                fit: BoxFit.cover,
+                              ),
+                        )
+                            : Image.asset(
+                          "assets/images/page/background.png",
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color.fromARGB(20, 0, 0, 0),
+                                Color.fromARGB(70, 0, 0, 0),
+                                Color(0xFF101010),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (!_isOwnProfile)
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: canInteract
+                              ? StreamBuilder<bool>(
+                            stream: widget.isSubscribedStream,
+                            builder: (context, snap) {
+                              final subscribed = snap.data ?? false;
 
-          // Name
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  "${widget.userData.vorname ?? ''} ${widget.userData.nachname ?? ''}",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    decoration: TextDecoration.none,
+                              return GestureDetector(
+                                onTap: () async {
+                                  await _toggleAbo(subscribed);
+                                },
+                                child: AnimatedContainer(
+                                  duration:
+                                  const Duration(milliseconds: 160),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: subscribed
+                                        ? Colors.black.withValues(alpha: 0.72)
+                                        : Colors.orange.withValues(alpha: 0.95),
+                                    borderRadius:
+                                    BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: subscribed
+                                          ? Colors.white24
+                                          : Colors.orangeAccent,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.22),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        subscribed
+                                            ? Icons.check_outlined
+                                            : Icons.add_alert_outlined,
+                                        size: 20,
+                                        color: subscribed
+                                            ? Colors.green
+                                            : Colors.black,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        subscribed
+                                            ? "Abonniert"
+                                            : "Abonnieren",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: subscribed
+                                              ? Colors.white
+                                              : Colors.black,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                              : Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: avatarSize,
+                                height: avatarSize,
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.35),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: _hasProfileImage
+                                      ? CachedNetworkImage(
+                                    imageUrl: widget
+                                        .userData.profilePictureUrl!
+                                        .trim(),
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) =>
+                                        Image.asset(
+                                          "assets/images/page/empty.png",
+                                          fit: BoxFit.cover,
+                                        ),
+                                    errorWidget: (context, url, error) =>
+                                        Image.asset(
+                                          "assets/images/page/empty.png",
+                                          fit: BoxFit.cover,
+                                        ),
+                                  )
+                                      : Image.asset(
+                                    "assets/images/page/empty.png",
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                _displayName.isEmpty
+                                    ? "Unbekannter Nutzer"
+                                    : _displayName,
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _subTitle,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              SizedBox(
+                                height: 28,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: HelperUtil.getUserIcon(
+                                    widget.userData.role ?? "USER",
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          // Role-Icon
-          Padding(
-            padding: const EdgeInsets.only(top: 0, bottom: 0, right: 20, left: 20),
-            child: HelperUtil.getUserIcon(widget.userData.role ?? "USER"),
-          ),
-
-          // ------------------------------------------------------------
-          // Stats: Videos / Bilder / Posts gesamt
-          // ------------------------------------------------------------
-          Padding(
-            padding: const EdgeInsets.only(top: 20, left: 15, right: 15, bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Videos
-                StreamBuilder<int>(
-                  stream: widget.videoCountStream,
-                  builder: (context, snap) {
-                    final count = snap.data ?? 0;
-                    return _StatColumn(
-                      value: "$count",
-                      label: count == 1 ? "Video" : "Videos",
-                    );
-                  },
-                ),
-
-                // Bilder
-                StreamBuilder<int>(
-                  stream: widget.imageCountStream,
-                  builder: (context, snap) {
-                    final count = snap.data ?? 0;
-                    return _StatColumn(
-                      value: "$count",
-                      label: count == 1 ? "Bild" : "Bilder",
-                    );
-                  },
-                ),
-
-                // Posts gesamt = Videos + Bilder
-                StreamBuilder<int>(
-                  stream: widget.videoCountStream,
-                  builder: (context, vSnap) {
-                    final v = vSnap.data ?? 0;
-                    return StreamBuilder<int>(
-                      stream: widget.imageCountStream,
-                      builder: (context, iSnap) {
-                        final i = iSnap.data ?? 0;
-                        final total = v + i;
-                        return _StatColumn(
-                          value: "$total",
-                          label: total == 1 ? "Post" : "Posts",
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ------------------------------------------------------------
-          // Stats: Video-Ansichten / Bild-Ansichten / Gesamt-Ansichten
-          // ------------------------------------------------------------
-          Padding(
-            padding: const EdgeInsets.only(top: 0, left: 15, right: 15, bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Video-Ansichten
-                StreamBuilder<int>(
-                  stream: widget.videoViewsStream,
-                  builder: (context, snap) {
-                    final views = snap.data ?? 0;
-                    return _StatColumn(
-                      value: "$views",
-                      label: views == 1 ? "Video-Ansicht" : "Video-Ansichten",
-                    );
-                  },
-                ),
-
-                // Bild-Ansichten
-                StreamBuilder<int>(
-                  stream: widget.imageViewsStream,
-                  builder: (context, snap) {
-                    final views = snap.data ?? 0;
-                    return _StatColumn(
-                      value: "$views",
-                      label: views == 1 ? "Bild-Ansicht" : "Bild-Ansichten",
-                    );
-                  },
-                ),
-
-                // Gesamt-Ansichten = VideoViews + ImageViews
-                StreamBuilder<int>(
-                  stream: widget.videoViewsStream,
-                  builder: (context, vSnap) {
-                    final v = vSnap.data ?? 0;
-                    return StreamBuilder<int>(
-                      stream: widget.imageViewsStream,
-                      builder: (context, iSnap) {
-                        final i = iSnap.data ?? 0;
-                        final total = v + i;
-                        return _StatColumn(
-                          value: "$total",
-                          label: total == 1 ? "Ansicht" : "Ansichten",
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ------------------------------------------------------------
-          // Abonnenten (bleibt)
-          // ------------------------------------------------------------
-          Padding(
-            padding: const EdgeInsets.only(top: 5, left: 15, right: 15, bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                StreamBuilder<int>(
-                  stream: widget.subscribersCountStream,
-                  builder: (context, snap) {
-                    final subs = snap.data ?? 0;
-                    return _StatColumn(
-                      value: "$subs",
-                      label: subs == 1 ? "Abonnent" : "Abonnenten",
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ------------------------------------------------------------
-          // Abo Button
-          // ------------------------------------------------------------
-          Align(
-            alignment: Alignment.centerRight,
-            child: canInteract
-                ? Padding(
-              padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
-              child: StreamBuilder<bool>(
-                stream: widget.isSubscribedStream,
-                builder: (context, snap) {
-                  final subscribed = snap.data ?? false;
-
-                  return GestureDetector(
-                    onTap: () async {
-                      await _toggleAbo(subscribed);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(2),
-                        color: Colors.black,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 18),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Icon(
-                            subscribed ? Icons.check_outlined : Icons.add_alert_outlined,
-                            size: 25,
-                            color: subscribed ? Colors.green : Colors.white,
+                          Expanded(
+                            child: _SingleStreamStatCard(
+                              stream: widget.videoCountStream,
+                              valueBuilder: (v) => "$v",
+                              titleBuilder: (v) => v == 1 ? "Video" : "Videos",
+                              icon: Icons.play_circle_outline,
+                            ),
                           ),
-                          const SizedBox(width: 5),
-                          Text(
-                            subscribed ? "Abboniert" : "Abbonieren",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontSize: 16,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _SingleStreamStatCard(
+                              stream: widget.imageCountStream,
+                              valueBuilder: (v) => "$v",
+                              titleBuilder: (v) => v == 1 ? "Bild" : "Bilder",
+                              icon: Icons.image_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _DualStreamStatCard(
+                              firstStream: widget.videoCountStream,
+                              secondStream: widget.imageCountStream,
+                              valueBuilder: (a, b) => "${a + b}",
+                              titleBuilder: (a, b) =>
+                              (a + b) == 1 ? "Post" : "Posts",
+                              icon: Icons.grid_view_rounded,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
-              ),
-            )
-                : const Padding(
-              padding: EdgeInsets.only(top: 20, right: 10),
-              child: SizedBox(
-                width: 25,
-                height: 25,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-              ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SingleStreamStatCard(
+                              stream: widget.videoViewsStream,
+                              valueBuilder: (v) => "$v",
+                              titleBuilder: (v) =>
+                              v == 1 ? "Video-Ansicht" : "Video-Ansichten",
+                              icon: Icons.visibility_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _SingleStreamStatCard(
+                              stream: widget.imageViewsStream,
+                              valueBuilder: (v) => "$v",
+                              titleBuilder: (v) =>
+                              v == 1 ? "Bild-Ansicht" : "Bild-Ansichten",
+                              icon: Icons.photo_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _DualStreamStatCard(
+                              firstStream: widget.videoViewsStream,
+                              secondStream: widget.imageViewsStream,
+                              valueBuilder: (a, b) => "${a + b}",
+                              titleBuilder: (a, b) =>
+                              (a + b) == 1 ? "Ansicht" : "Ansichten",
+                              icon: Icons.bar_chart_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SingleStreamStatCard(
+                              stream: widget.subscribersCountStream,
+                              valueBuilder: (v) => "$v",
+                              titleBuilder: (v) =>
+                              v == 1 ? "Abonnent" : "Abonnenten",
+                              icon: Icons.people_alt_outlined,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -319,7 +423,7 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
             meldung: Meldung(
               meldungsart: Meldungsart.INFO,
               text:
-              "Du hast ${widget.userData.vorname} ${widget.userData.nachname} deabboniert!",
+              "Du hast ${widget.userData.vorname} ${widget.userData.nachname} deabonniert!",
             ),
           );
         }
@@ -352,7 +456,7 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
             meldung: Meldung(
               meldungsart: Meldungsart.SUCCESS,
               text:
-              "Du hast ${widget.userData.vorname} ${widget.userData.nachname} abboniert!",
+              "Du hast ${widget.userData.vorname} ${widget.userData.nachname} abonniert!",
             ),
           );
         }
@@ -361,7 +465,7 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
-          text: "Fehler beim Abbonieren:\n$e",
+          text: "Fehler beim Abonnieren:\n$e",
         ),
       );
     } finally {
@@ -369,39 +473,130 @@ class _UserInfoHeaderState extends State<UserInfoHeader> {
       setState(() => canInteract = true);
     }
   }
-
 }
 
-class _StatColumn extends StatelessWidget {
-  final String value;
-  final String label;
+class _SingleStreamStatCard extends StatelessWidget {
+  final Stream<int> stream;
+  final String Function(int value) valueBuilder;
+  final String Function(int value) titleBuilder;
+  final IconData icon;
 
-  const _StatColumn({
-    required this.value,
-    required this.label,
+  const _SingleStreamStatCard({
+    required this.stream,
+    required this.valueBuilder,
+    required this.titleBuilder,
+    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    return StreamBuilder<int>(
+      stream: stream,
+      builder: (context, snap) {
+        final value = snap.data ?? 0;
+
+        return _StatCard(
+          value: valueBuilder(value),
+          label: titleBuilder(value),
+          icon: icon,
+        );
+      },
+    );
+  }
+}
+
+class _DualStreamStatCard extends StatelessWidget {
+  final Stream<int> firstStream;
+  final Stream<int> secondStream;
+  final String Function(int first, int second) valueBuilder;
+  final String Function(int first, int second) titleBuilder;
+  final IconData icon;
+
+  const _DualStreamStatCard({
+    required this.firstStream,
+    required this.secondStream,
+    required this.valueBuilder,
+    required this.titleBuilder,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: firstStream,
+      builder: (context, firstSnap) {
+        final first = firstSnap.data ?? 0;
+
+        return StreamBuilder<int>(
+          stream: secondStream,
+          builder: (context, secondSnap) {
+            final second = secondSnap.data ?? 0;
+
+            return _StatCard(
+              value: valueBuilder(first, second),
+              label: titleBuilder(first, second),
+              icon: icon,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+
+  const _StatCard({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 108),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: Colors.orange,
+            size: 21,
           ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.white,
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 21,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }
