@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../../models/ReplyDto.dart';
 
 class ReplyActionsRow extends StatelessWidget {
@@ -27,96 +28,103 @@ class ReplyActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    final double opacity = enabled ? 1.0 : 0.35;
+    final double opacity = enabled ? 1.0 : 0.45;
 
     return Opacity(
       opacity: opacity,
       child: IgnorePointer(
         ignoring: !enabled,
-        child: Container(
-          padding: const EdgeInsets.only(left: 10, right: 10),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
           child: Row(
             children: [
-              // Like
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: onLike,
-                      child: Icon(
-                        Icons.thumb_up,
-                        color: isLiked ? Colors.green : Colors.grey,
-                        size: 15,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        "${reply.likes}",
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 0,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _ReplyActionChip(
+                icon: Icons.thumb_up_alt_outlined,
+                color: isLiked ? Colors.green : Colors.white60,
+                label: "${reply.likes}",
+                onTap: onLike,
               ),
-
-              // Dislike
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: onDislike,
-                      child: Icon(
-                        Icons.thumb_down,
-                        color: isDisliked ? Colors.red : Colors.grey,
-                        size: 15,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        "${reply.dislikes}",
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 0,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(width: 8),
+              _ReplyActionChip(
+                icon: Icons.thumb_down_alt_outlined,
+                color: isDisliked ? Colors.red : Colors.white60,
+                label: "${reply.dislikes}",
+                onTap: onDislike,
               ),
-
-              // Delete (nur uploader)
-              if (isUploader)
-                Expanded(
+              if (isUploader) ...[
+                const Spacer(),
+                GestureDetector(
+                  onTap: onDeleteTapped,
                   child: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: GestureDetector(
-                      onTap: onDeleteTapped,
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.grey,
-                        size: 25,
-                      ),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E1E),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white70,
+                      size: 16,
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+}
 
+class _ReplyActionChip extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ReplyActionChip({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 9,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 14,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.white70,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -1,7 +1,7 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../../../models/CommentDto.dart';
 import '../../../models/Meldung.dart';
 import '../../../models/PostDto.dart';
@@ -10,7 +10,6 @@ import '../../../repositories/post_repository.dart';
 import '../../../repositories/user_repository.dart';
 import '../../../util/HelperUtil.dart';
 import 'CommentWidegt/CommentWidget.dart';
-
 
 class PostCommentsSection extends StatefulWidget {
   final PostDto post;
@@ -42,8 +41,8 @@ class PostCommentsSection extends StatefulWidget {
 }
 
 class _PostCommentsSectionState extends State<PostCommentsSection> {
-
   final TextEditingController _commentController = TextEditingController();
+
   bool _isSending = false;
   String? _activeReplyCommentId;
   String? _highlightedCommentId;
@@ -52,7 +51,6 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
   bool _initialScrollDone = false;
 
   final userRepository = UserRepository();
-
 
   @override
   void dispose() {
@@ -67,15 +65,32 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-
-        // Kopfzeile "Kommentare (X)"
-        Container(
-          color: Colors.black,
-          padding: const EdgeInsets.only(left: 15, right: 15, top: 15),
-          child: Row(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(0, 5, 0, 18),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.20),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
+              const Icon(
+                Icons.forum_outlined,
+                color: Colors.orange,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
               StreamBuilder<int>(
                 stream: widget.commentsCountStream,
                 builder: (context, snap) {
@@ -83,7 +98,7 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
                   return Text(
                     'Kommentare ($total)',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -92,148 +107,169 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
               ),
             ],
           ),
-        ),
 
-        // Eingabe
-        Container(
-          color: Colors.black,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _commentController,
-                  cursorColor: Colors.black,
-                  style: const TextStyle(
-                    color: Colors.black,   // ✅ Eingabetext lesbar
-                    fontSize: 16,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Schreibe einen Kommentar...',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    fillColor: Colors.white,
-                    filled: true,
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.white, width: 1.5),
-                      borderRadius: BorderRadius.circular(10),
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B1B1B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    cursorColor: Colors.orange,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.blue, width: 3.0),
-                      borderRadius: BorderRadius.circular(10),
+                    minLines: 1,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      hintText: 'Schreibe einen Kommentar...',
+                      hintStyle: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 15,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
                     ),
                   ),
                 ),
-              ),
-              _isSending
-                  ? const SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(color: Colors.white),
-              )
-                  : IconButton(
-                icon: const Icon(Icons.send, size: 30, color: Colors.white),
-                onPressed: _sendComment,
-              ),
-            ],
+                const SizedBox(width: 10),
+                _isSending
+                    ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.2,
+                  ),
+                )
+                    : GestureDetector(
+                  onTap: _sendComment,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      size: 18,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
 
-        // Realtime + Paging
-        FirestoreQueryBuilder<Map<String, dynamic>>(
-          query: widget.commentsQuery,
-          pageSize: widget.pageSize,
-          builder: (context, snapshot, _) {
-            if (snapshot.isFetching && snapshot.docs.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-              );
-            }
+          const SizedBox(height: 12),
 
-            if (snapshot.hasError) {
-              return Text(
-                "Fehler beim Laden der Kommentare: ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
-              );
-            }
+          FirestoreQueryBuilder<Map<String, dynamic>>(
+            query: widget.commentsQuery,
+            pageSize: widget.pageSize,
+            builder: (context, snapshot, _) {
+              if (snapshot.isFetching && snapshot.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                );
+              }
 
-            if (snapshot.docs.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.only(bottom: 20),
-                child: Text(
-                  "Noch keine Kommentare vorhanden.",
-                  style: TextStyle(color: Colors.white70),
-                ),
-              );
-            }
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    "Fehler beim Laden der Kommentare: ${snapshot.error}",
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              }
 
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.docs.length + 1,
-              itemBuilder: (context, index) {
-                // load more row
-                if (index == snapshot.docs.length) {
-                  if (!snapshot.hasMore) return const SizedBox(height: 20);
+              if (snapshot.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.only(top: 10, bottom: 12),
+                  child: Text(
+                    "Noch keine Kommentare vorhanden.",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                );
+              }
 
-                  if (snapshot.isFetchingMore) {
-                    return const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: snapshot.docs.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == snapshot.docs.length) {
+                    if (!snapshot.hasMore) return const SizedBox(height: 6);
+
+                    if (snapshot.isFetchingMore) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      );
+                    }
+
+                    return Center(
+                      child: TextButton(
+                        onPressed: snapshot.fetchMore,
+                        child: const Text(
+                          "Mehr laden",
+                          style: TextStyle(color: Colors.white70),
+                        ),
                       ),
                     );
                   }
 
-                  return Center(
-                    child: TextButton(
-                      onPressed: snapshot.fetchMore,
-                      child: const Text("Mehr laden"),
+                  final doc = snapshot.docs[index];
+                  final comment = CommentDto.fromDocument(doc);
+
+                  final key = _getCommentKey(comment.id);
+
+                  final shouldOpenReplySection = widget.initialReplyId != null &&
+                      widget.initialCommentId == comment.id;
+
+                  final shouldScrollToThisComment =
+                      widget.initialCommentId != null &&
+                          widget.initialCommentId == comment.id;
+
+                  if (shouldScrollToThisComment) {
+                    _scrollToCommentIfNeeded(comment.id);
+                  }
+
+                  return Container(
+                    key: key,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: CommentWidget(
+                      key: ValueKey(comment.id),
+                      comment: comment,
+                      userData: widget.currentUser,
+                      onTapped: widget.onPauseVideo,
+                      isActive:
+                      _activeReplyCommentId == comment.id || shouldOpenReplySection,
+                      onReplyTapped: () => _toggleReplyInput(comment.id),
+                      postRepository: widget.postRepository,
+                      initialReplyId: widget.initialReplyId,
+                      highlighted: _highlightedCommentId == comment.id,
                     ),
                   );
-                }
-
-                final doc = snapshot.docs[index];
-                final comment = CommentDto.fromDocument(doc);
-
-                final key = _getCommentKey(comment.id);
-
-                final shouldOpenReplySection = widget.initialReplyId != null &&
-                    widget.initialCommentId == comment.id;
-
-                final shouldScrollToThisComment =
-                    widget.initialCommentId != null &&
-                        widget.initialCommentId == comment.id;
-
-                if (shouldScrollToThisComment) {
-                  _scrollToCommentIfNeeded(comment.id);
-                }
-
-                return Container(
-                  key: key,
-                  child: CommentWidget(
-                    key: ValueKey(comment.id),
-                    comment: comment,
-                    userData: widget.currentUser,
-                    onTapped: widget.onPauseVideo,
-                    isActive: _activeReplyCommentId == comment.id || shouldOpenReplySection,
-                    onReplyTapped: () => _toggleReplyInput(comment.id),
-                    postRepository: widget.postRepository,
-                    initialReplyId: widget.initialReplyId,
-                    highlighted: _highlightedCommentId == comment.id,
-
-                  ),
-                );
-
-
-              },
-            );
-          },
-        ),
-
-      ],
+                },
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -244,8 +280,10 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
     final uid = widget.currentUser.userid;
     if (uid == null || uid.isEmpty) {
       HelperUtil.getToast(
-        meldung: Meldung(meldungsart: Meldungsart.ERROR, text: "Nicht eingeloggt."),
-
+        meldung: Meldung(
+          meldungsart: Meldungsart.ERROR,
+          text: "Nicht eingeloggt.",
+        ),
       );
       return;
     }
@@ -267,7 +305,6 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
           meldungsart: Meldungsart.ERROR,
           text: "Kommentar konnte nicht hinzugefügt werden:\n$e",
         ),
-
       );
     } finally {
       if (!mounted) return;
@@ -278,7 +315,6 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
   void _toggleReplyInput(String commentId) async {
     final userId = widget.currentUser.userid;
     if (userId == null || userId.isEmpty) return;
-
 
     setState(() {
       if (_activeReplyCommentId == commentId) {
@@ -344,5 +380,4 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
       }
     });
   }
-
 }

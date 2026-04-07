@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../models/Meldung.dart';
 import '../../../../models/ReplyDto.dart';
 import '../../../../models/UserDto.dart';
@@ -55,31 +56,28 @@ class ReplyWidgetState extends State<ReplyWidget> {
 
   @override
   Widget build(BuildContext context) {
-
     final bool enabled = !isLoading && canInteract;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       decoration: BoxDecoration(
-        color: widget.highlighted ? const Color(0xFF4A3B00) : Colors.black,
-        border: Border(
-          top: BorderSide(
-            color: widget.highlighted ? Colors.amber : Colors.grey,
-            width: widget.highlighted ? 1.5 : 0.5,
-          ),
+        color: widget.highlighted
+            ? const Color(0xFF2D2400)
+            : const Color(0xFF151515),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: widget.highlighted ? Colors.amber : Colors.white10,
+          width: widget.highlighted ? 1.4 : 1,
         ),
       ),
       child: Column(
         children: [
-
           ReplyHeaderRow(
             reply: widget.reply,
             currentUser: widget.userData,
             onPauseVideo: widget.onTapped,
           ),
-
           ReplyContentText(content: widget.reply.content),
-
           ReplyActionsRow(
             reply: widget.reply,
             enabled: enabled,
@@ -90,7 +88,6 @@ class ReplyWidgetState extends State<ReplyWidget> {
             onDislike: _dislikeReply,
             onDeleteTapped: _confirmDelete,
           ),
-
         ],
       ),
     );
@@ -125,7 +122,6 @@ class ReplyWidgetState extends State<ReplyWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abrufen des Like/Dislike-Status:\n$e",
         ),
-
       );
     }
   }
@@ -189,7 +185,6 @@ class ReplyWidgetState extends State<ReplyWidget> {
             title: "Antwort löschen",
             message: "Soll die Antwort wirklich gelöscht werden?",
             onConfirm: () async {
-
               setState(() {
                 isLoading = true;
                 canInteract = false;
@@ -220,7 +215,6 @@ class ReplyWidgetState extends State<ReplyWidget> {
           meldungsart: Meldungsart.SUCCESS,
           text: "Antwort erfolgreich gelöscht!",
         ),
-
       );
     } catch (e) {
       if (!mounted) return;
@@ -229,11 +223,9 @@ class ReplyWidgetState extends State<ReplyWidget> {
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Löschen der Antwort:\n$e",
         ),
-
       );
     }
   }
 
   bool _isUploader() => widget.userData.userid == widget.reply.userId;
-
 }

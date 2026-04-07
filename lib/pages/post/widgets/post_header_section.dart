@@ -49,17 +49,20 @@ class PostHeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
-    final imageMaxHeight = mediaQuery.size.height * 0.6;
+    final imageMaxHeight = mediaQuery.size.height * 0.62;
 
     return StreamBuilder<PostDto?>(
       stream: postStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16),
             child: Text(
-              'Error: ${snapshot.error}',
-              style: const TextStyle(fontSize: 16, color: Colors.red),
+              'Fehler: ${snapshot.error}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.red,
+              ),
             ),
           );
         }
@@ -85,293 +88,332 @@ class PostHeaderSection extends StatelessWidget {
         final views = post.views;
         final detailImageUrl = _getDetailImageUrl(post);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ---------------- MEDIA ----------------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 20, 12, 8),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(16),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFF121212),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.20),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: post.type == PostType.video
-                    ? (playerReady && chewieController != null
-                    ? AspectRatio(
-                  aspectRatio: chewieController!.aspectRatio ?? 16 / 9,
-                  child: Chewie(controller: chewieController!),
-                )
-                    : SizedBox(
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ---------------- MEDIA ----------------
+                Container(
                   width: double.infinity,
-                  height: screenWidth * 0.7,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1A1A1A),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
                   ),
-                ))
-                    : detailImageUrl.isNotEmpty
-                    ? ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: imageMaxHeight,
-                    minWidth: double.infinity,
-                  ),
-                  child: CachedNetworkImage(
-                    imageUrl: detailImageUrl,
-                    fit: BoxFit.contain,
+                  clipBehavior: Clip.antiAlias,
+                  child: post.type == PostType.video
+                      ? (playerReady && chewieController != null
+                      ? AspectRatio(
+                    aspectRatio:
+                    chewieController!.aspectRatio ?? 16 / 9,
+                    child: Chewie(controller: chewieController!),
+                  )
+                      : SizedBox(
                     width: double.infinity,
-                    fadeInDuration:
-                    const Duration(milliseconds: 120),
-                    memCacheWidth:
-                    (screenWidth * mediaQuery.devicePixelRatio)
-                        .round(),
-                    placeholder: (context, url) => SizedBox(
-                      width: double.infinity,
-                      height: screenWidth * 0.8,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                    height: screenWidth * 0.7,
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
                       ),
                     ),
-                    errorWidget: (context, url, error) {
-                      return Image.asset(
-                        "assets/images/page/empty.png",
-                        fit: BoxFit.contain,
+                  ))
+                      : detailImageUrl.isNotEmpty
+                      ? ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: imageMaxHeight,
+                      minWidth: double.infinity,
+                    ),
+                    child: CachedNetworkImage(
+                      imageUrl: detailImageUrl,
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      fadeInDuration:
+                      const Duration(milliseconds: 120),
+                      memCacheWidth: (screenWidth *
+                          mediaQuery.devicePixelRatio)
+                          .round(),
+                      placeholder: (context, url) => SizedBox(
                         width: double.infinity,
                         height: screenWidth * 0.8,
-                      );
-                    },
-                  ),
-                )
-                    : Image.asset(
-                  "assets/images/page/empty.png",
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: screenWidth * 0.8,
-                ),
-              ),
-            ),
-
-            // ---------------- TITEL ----------------
-            Container(
-              padding: const EdgeInsets.only(
-                left: 15,
-                right: 15,
-                top: 8,
-                bottom: 10,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.start,
-                      softWrap: true,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ---------------- META ----------------
-            Container(
-              color: Colors.black,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 12,
-                ),
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      views == 1 ? "$views Aufruf" : "$views Aufrufe",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.thumb_up,
-                          color: Colors.grey,
-                          size: 18,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         ),
-                        const SizedBox(width: 5),
-                        Text(
-                          HelperUtil.calculateLikePercentage(
-                            likes: likes,
-                            dislikes: dislikes,
+                      ),
+                      errorWidget: (context, url, error) {
+                        return Image.asset(
+                          "assets/images/page/empty.png",
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: screenWidth * 0.8,
+                        );
+                      },
+                    ),
+                  )
+                      : Image.asset(
+                    "assets/images/page/empty.png",
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: screenWidth * 0.8,
+                  ),
+                ),
+
+                // ---------------- CONTENT ----------------
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Titel
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 23,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Meta
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          _MetaChip(
+                            icon: Icons.visibility_outlined,
+                            label:
+                            views == 1 ? "$views Aufruf" : "$views Aufrufe",
                           ),
-                          style: const TextStyle(
+                          _MetaChip(
+                            icon: Icons.thumb_up_alt_outlined,
+                            label: HelperUtil.calculateLikePercentage(
+                              likes: likes,
+                              dislikes: dislikes,
+                            ),
+                          ),
+                          _MetaChip(
+                            icon: Icons.schedule,
+                            label: HelperUtil.getTimeAgo(uploadDate),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Like / Dislike
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              label: "$likes",
+                              text: "Gefällt mir",
+                              icon: Icons.thumb_up_alt_outlined,
+                              isActive: isLiked,
+                              activeColor: Colors.blue,
+                              canInteract: canInteract,
+                              onTap: onLike,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _ActionButton(
+                              label: "$dislikes",
+                              text: "Gefällt nicht",
+                              icon: Icons.thumb_down_alt_outlined,
+                              isActive: isDisliked,
+                              activeColor: Colors.red,
+                              canInteract: canInteract,
+                              onTap: onDislike,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      if (categories.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        const Text(
+                          "Kategorien",
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: categories.map((category) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF232323),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: Text(
+                                category,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ],
-                    ),
-                    Text(
-                      HelperUtil.getTimeAgo(uploadDate),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-
-            // ---------------- LIKE / DISLIKE ----------------
-            Container(
-              color: Colors.black,
-              padding: const EdgeInsets.only(top: 5, bottom: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _LikeButton(
-                    labelCount: likes,
-                    isActive: isLiked,
-                    canInteract: canInteract,
-                    icon: Icons.thumb_up,
-                    activeColor: Colors.blue,
-                    onTap: onLike,
-                  ),
-                  _LikeButton(
-                    labelCount: dislikes,
-                    isActive: isDisliked,
-                    canInteract: canInteract,
-                    icon: Icons.thumb_down,
-                    activeColor: Colors.red,
-                    onTap: onDislike,
-                  ),
-                ],
-              ),
-            ),
-
-            // ---------------- KATEGORIEN ----------------
-            if (categories.isNotEmpty)
-              Container(
-                color: Colors.black,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.all(8.0),
-                child: const Text(
-                  "Kategorien",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-            if (categories.isNotEmpty)
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(left: 3, right: 3, bottom: 10),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 3.0,
-                  mainAxisSpacing: 3.0,
-                  childAspectRatio: 80 / 20,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  return Container(
-                    padding: const EdgeInsets.all(3),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[700],
-                      border: Border.all(),
-                      borderRadius:
-                      const BorderRadius.all(Radius.circular(10)),
-                    ),
-                    child: Text(
-                      categories[index].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                },
-              ),
-          ],
+          ),
         );
       },
     );
   }
 }
 
-class _LikeButton extends StatelessWidget {
-  final int labelCount;
-  final bool isActive;
-  final bool canInteract;
+class _MetaChip extends StatelessWidget {
   final IconData icon;
+  final String label;
+
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F1F1F),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: Colors.white60,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final String text;
+  final IconData icon;
+  final bool isActive;
   final Color activeColor;
+  final bool canInteract;
   final Future<void> Function() onTap;
 
-  const _LikeButton({
-    required this.labelCount,
-    required this.isActive,
-    required this.canInteract,
+  const _ActionButton({
+    required this.label,
+    required this.text,
     required this.icon,
+    required this.isActive,
     required this.activeColor,
+    required this.canInteract,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        children: [
-          canInteract
-              ? GestureDetector(
-            onTap: onTap,
-            child: Icon(
+    final foreground = isActive ? activeColor : Colors.white;
+
+    return GestureDetector(
+      onTap: canInteract ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1C),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isActive ? activeColor.withValues(alpha: 0.7) : Colors.white10,
+          ),
+        ),
+        child: canInteract
+            ? Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
               icon,
-              color: isActive ? activeColor : Colors.white,
-              size: 20,
+              color: foreground,
+              size: 18,
             ),
-          )
-              : const SizedBox(
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                "$text · $label",
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        )
+            : const Center(
+          child: SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
               color: Colors.white,
-              strokeWidth: 3,
+              strokeWidth: 2.5,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Text(
-              "$labelCount",
-              style: const TextStyle(
-                fontSize: 20,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

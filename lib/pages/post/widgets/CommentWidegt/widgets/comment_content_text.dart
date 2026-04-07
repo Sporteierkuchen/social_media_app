@@ -10,25 +10,21 @@ class CommentContentText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Text(
-              content,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 0,
-                color: Colors.white,
-                fontWeight: FontWeight.normal,
-              ),
-              textAlign: TextAlign.start,
-              softWrap: true,
-            ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          content,
+          style: const TextStyle(
+            fontSize: 15,
+            color: Colors.white,
+            fontWeight: FontWeight.normal,
+            height: 1.35,
           ),
-        ],
+          textAlign: TextAlign.start,
+          softWrap: true,
+        ),
       ),
     );
   }

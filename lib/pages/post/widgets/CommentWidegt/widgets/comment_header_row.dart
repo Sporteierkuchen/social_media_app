@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../../../../../models/CommentDto.dart';
 import '../../../../../models/UserDto.dart';
 import '../../../../../util/HelperUtil.dart';
@@ -19,110 +21,98 @@ class CommentHeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      child: Row(
-        children: [
+    final hasImage = comment.profilePictureUrl.trim().isNotEmpty;
 
-          // Avatar
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
           Container(
-            decoration: BoxDecoration(
+            width: 46,
+            height: 46,
+            padding: const EdgeInsets.all(2),
+            decoration: const BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(120),
-              child: Image.network(
-                comment.profilePictureUrl,
+            child: ClipOval(
+              child: hasImage
+                  ? CachedNetworkImage(
+                imageUrl: comment.profilePictureUrl,
                 fit: BoxFit.cover,
-                width: 50,
-                height: 50,
-                errorBuilder: (context, error, stackTrace) {
-                  return Image.asset(
-                    "assets/images/page/empty.png",
-                    fit: BoxFit.cover,
-                    width: 50,
-                    height: 50,
-                  );
-                },
+                placeholder: (context, url) => Image.asset(
+                  "assets/images/page/empty.png",
+                  fit: BoxFit.cover,
+                ),
+                errorWidget: (context, url, error) => Image.asset(
+                  "assets/images/page/empty.png",
+                  fit: BoxFit.cover,
+                ),
+              )
+                  : Image.asset(
+                "assets/images/page/empty.png",
+                fit: BoxFit.cover,
               ),
             ),
           ),
-
-          // Username + Role
+          const SizedBox(width: 12),
           Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: GestureDetector(
-                onTap: () async {
-                  if (_isUploader()) return;
+            child: GestureDetector(
+              onTap: () async {
+                if (_isUploader()) return;
 
-                  onPauseVideo();
+                onPauseVideo();
 
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserInfoPage(
-                        userID: comment.userId,
-                        viewerID: currentUser.userid!,
-                      ),
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserInfoPage(
+                      userID: comment.userId,
+                      viewerID: currentUser.userid!,
                     ),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: Text(
-                        comment.username,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          height: 0,
-                          color: Colors.orange,
-                          fontWeight: FontWeight.normal,
+                  ),
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          comment.username,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w700,
+                            height: 1.15,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.start,
-                        softWrap: true,
                       ),
+                      const SizedBox(width: 6),
+                      HelperUtil.getUserIcon(comment.role),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    HelperUtil.getTimeAgo(comment.timestamp ?? Timestamp.now()),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.white60,
+                      height: 1.1,
                     ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 5),
-                        child: HelperUtil.getUserIcon(comment.role),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-
-          // Timestamp
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                HelperUtil.getTimeAgo(comment.timestamp ?? Timestamp.now()),
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 0,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.normal,
-                ),
-                textAlign: TextAlign.start,
-                softWrap: true,
-              ),
-            ),
-          ),
-
         ],
       ),
     );
   }
 
   bool _isUploader() => currentUser.userid == comment.userId;
-
 }

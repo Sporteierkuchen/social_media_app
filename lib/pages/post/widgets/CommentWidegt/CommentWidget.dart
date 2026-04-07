@@ -1,16 +1,15 @@
-
 import 'package:flutter/material.dart';
 import 'package:social_media_app/pages/post/widgets/CommentWidegt/widgets/comment_actions_row.dart';
 import 'package:social_media_app/pages/post/widgets/CommentWidegt/widgets/comment_content_text.dart';
 import 'package:social_media_app/pages/post/widgets/CommentWidegt/widgets/comment_header_row.dart';
 import 'package:social_media_app/pages/post/widgets/CommentWidegt/widgets/comment_replies_section.dart';
+
 import '../../../../models/CommentDto.dart';
 import '../../../../models/UserDto.dart';
 import '../../../../repositories/post_repository.dart';
 import '../../../../models/Meldung.dart';
 import '../../../../util/HelperUtil.dart';
 import '../../../../widgets/Bestätigung.dart';
-
 
 class CommentWidget extends StatefulWidget {
   final CommentDto comment;
@@ -39,22 +38,14 @@ class CommentWidget extends StatefulWidget {
 }
 
 class CommentWidgetState extends State<CommentWidget> {
-
   bool isLiked = false;
   bool isDisliked = false;
   bool canInteract = true;
-
   bool isLoading = true;
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   void initState() {
     super.initState();
-
     initialize();
   }
 
@@ -63,35 +54,32 @@ class CommentWidgetState extends State<CommentWidget> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.comment.id != widget.comment.id) {
-      // Kommentar hat gewechselt -> lokalen State resetten
       isLiked = false;
       isDisliked = false;
       isLoading = true;
-
-      initialize(); // lädt korrekten Status für neuen Kommentar
+      initialize();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final bool enabled = !isLoading && canInteract;
-    final double opacity = enabled ? 1.0 : 0.35;
+    final double opacity = enabled ? 1.0 : 0.45;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(vertical: 0),
+      duration: const Duration(milliseconds: 250),
       decoration: BoxDecoration(
-        color: widget.highlighted ? const Color(0xFF4A3B00) : Colors.black,
-        border: Border(
-          top: BorderSide(
-            color: widget.highlighted ? Colors.amber : Colors.grey,
-            width: widget.highlighted ? 2 : 1,
-          ),
+        color: widget.highlighted
+            ? const Color(0xFF2D2400)
+            : const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: widget.highlighted ? Colors.amber : Colors.white10,
+          width: widget.highlighted ? 1.5 : 1,
         ),
       ),
       child: Column(
         children: [
-
           CommentHeaderRow(
             comment: widget.comment,
             currentUser: widget.userData,
@@ -110,7 +98,7 @@ class CommentWidgetState extends State<CommentWidget> {
             onLike: _likeComment,
             onDislike: _dislikeComment,
             onReplyTapped: widget.onReplyTapped,
-            onDeleteTapped: _confirmDelete
+            onDeleteTapped: _confirmDelete,
           ),
 
           Opacity(
@@ -123,12 +111,11 @@ class CommentWidgetState extends State<CommentWidget> {
                 onTapped: widget.onTapped,
                 postRepository: widget.postRepository,
                 isActive: widget.isActive,
-                onClose: widget.onReplyTapped, // toggelt wieder zu
+                onClose: widget.onReplyTapped,
                 initialReplyId: widget.initialReplyId,
               ),
             ),
           ),
-
         ],
       ),
     );
@@ -156,20 +143,12 @@ class CommentWidgetState extends State<CommentWidget> {
         isLiked = status['liked'] ?? false;
         isDisliked = status['disliked'] ?? false;
       });
-
-      debugPrint(
-        "[CommentWidget] Like/Dislike-Status: liked=$isLiked, disliked=$isDisliked",
-      );
     } catch (e) {
-      debugPrint(
-        "[CommentWidget] Fehler beim Abrufen des Like/Dislike-Status: $e",
-      );
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Abrufen des Like/Dislike-Status:\n$e",
         ),
-
       );
     }
   }
@@ -200,13 +179,11 @@ class CommentWidgetState extends State<CommentWidget> {
         });
       }
     } catch (e) {
-      debugPrint("[CommentWidget] Fehler beim Liken des Comments: $e");
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Liken des Kommentars:\n$e",
         ),
-
       );
     } finally {
       if (mounted) {
@@ -243,13 +220,11 @@ class CommentWidgetState extends State<CommentWidget> {
         });
       }
     } catch (e) {
-      debugPrint("[CommentWidget] Fehler beim Disliken des Comments: $e");
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Disliken des Kommentars:\n$e",
         ),
-
       );
     } finally {
       if (mounted) {
@@ -277,7 +252,6 @@ class CommentWidgetState extends State<CommentWidget> {
             title: "Kommentar löschen",
             message: "Soll der Kommentar wirklich gelöscht werden?",
             onConfirm: () async {
-
               if (!mounted) return;
               setState(() {
                 isLoading = true;
@@ -285,9 +259,7 @@ class CommentWidgetState extends State<CommentWidget> {
               });
 
               try {
-
                 await _deleteComment(widget.comment);
-
               } finally {
                 if (!mounted) return;
                 setState(() {
@@ -312,21 +284,14 @@ class CommentWidgetState extends State<CommentWidget> {
           meldungsart: Meldungsart.SUCCESS,
           text: "Kommentar erfolgreich gelöscht!",
         ),
-
-      );
-      debugPrint(
-        '[PostPage] Kommentar "${comment.content}" von ${comment.username} gelöscht.',
       );
     } catch (e) {
-      debugPrint('[PostPage] Fehler beim Löschen des Kommentars: $e');
       HelperUtil.getToast(
         meldung: Meldung(
           meldungsart: Meldungsart.ERROR,
           text: "Fehler beim Löschen des Kommentars:\n$e",
         ),
-
       );
     }
   }
-
 }
