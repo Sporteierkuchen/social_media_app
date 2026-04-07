@@ -4,7 +4,6 @@ import '../repositories/auth_repository.dart';
 import '../util/HelperUtil.dart';
 import '../widgets/TextInput.dart';
 import '../widgets/Captcha/Captcha_tile.dart';
-import 'LoginPage.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
