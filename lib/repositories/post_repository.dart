@@ -1,7 +1,10 @@
 
+import 'dart:io';
+import 'dart:typed_data' as typed;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/PostDto.dart';
 import '../models/CommentDto.dart';
@@ -38,6 +41,142 @@ class PostRepository {
   CollectionReference get _posts => _firestore.collection('posts');
   CollectionReference get _comments => _firestore.collection('comments');
   CollectionReference get _replies => _firestore.collection('replies');
+
+  Future<String> createPost({
+    required String type,
+    required String title,
+    required List<String> categories,
+    required String mediaUrl,
+    required String thumbnailUrl,
+    required String previewUrl,
+    required String fullImageUrl,
+    required UserDto user,
+  }) async {
+    final String vorname = user.vorname ?? "";
+    final String nachname = user.nachname ?? "";
+    final String benutzername = user.benutzername ?? "";
+
+    final docRef = await _posts.add({
+      'type': type,
+      'title': title,
+      'titleLower': title.toLowerCase().trim(),
+      'fullNameLower': "$vorname $nachname".toLowerCase().trim(),
+
+      'searchText': _buildSearchText(
+        title: title,
+        vorname: vorname,
+        nachname: nachname,
+        benutzername: benutzername,
+        categories: categories,
+      ),
+
+      'category': categories,
+
+      'mediaUrl': mediaUrl,
+      'thumbnailUrl': thumbnailUrl,
+      'previewUrl': previewUrl,
+      'fullImageUrl': fullImageUrl,
+
+      'timestamp': Timestamp.now(),
+      'views': 0,
+      'likes': 0,
+      'dislikes': 0,
+
+      'userid': user.userid,
+      'benutzername': benutzername,
+      'vorname': vorname,
+      'nachname': nachname,
+      'profilePictureUrl': user.profilePictureUrl ?? "",
+      'role': user.role ?? "USER",
+    });
+
+    return docRef.id;
+  }
+
+  String _buildSearchText({
+    required String title,
+    required String vorname,
+    required String nachname,
+    required String benutzername,
+    required List<String> categories,
+  }) {
+    return [
+      title,
+      vorname,
+      nachname,
+      "$vorname $nachname",
+      benutzername,
+      ...categories,
+    ].join(" ").toLowerCase().trim();
+  }
+
+  Future<String> uploadFileToStorage({
+    required File file,
+    required String rootFolder,
+    required String userId,
+    String? fileName,
+    void Function(double progress)? onProgress,
+  }) async {
+    final uniqueId = fileName ?? const Uuid().v4();
+
+    final ref = _storage
+        .ref()
+        .child(rootFolder)
+        .child(userId)
+        .child(uniqueId);
+
+    final task = ref.putFile(file);
+
+    task.snapshotEvents.listen((snapshot) {
+      final total = snapshot.totalBytes;
+      final transferred = snapshot.bytesTransferred;
+
+      if (total > 0) {
+        onProgress?.call(transferred / total);
+      }
+    });
+
+    await task;
+
+    return await ref.getDownloadURL();
+  }
+
+  Future<String> uploadBytesToStorage({
+    required typed.Uint8List bytes,
+    required String rootFolder,
+    required String userId,
+    required String extension,
+    void Function(double progress)? onProgress,
+  }) async {
+    final uniqueId = "${const Uuid().v4()}.$extension";
+
+    final ref = _storage
+        .ref()
+        .child(rootFolder)
+        .child(userId)
+        .child(uniqueId);
+
+    final metadata = SettableMetadata(
+      contentType: extension == 'jpg' || extension == 'jpeg'
+          ? 'image/jpeg'
+          : 'application/octet-stream',
+    );
+
+    final task = ref.putData(bytes, metadata);
+
+    task.snapshotEvents.listen((snapshot) {
+      final total = snapshot.totalBytes;
+      final transferred = snapshot.bytesTransferred;
+
+      if (total > 0) {
+        onProgress?.call(transferred / total);
+      }
+    });
+
+    await task;
+
+    return await ref.getDownloadURL();
+  }
 
   Future<PostDto?> getPostById(String postId) async {
     try {

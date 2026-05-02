@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserDto {
-  final String? userid;            // Firestore-Dokument-ID / uid
+  final String? userid;
   final String? benutzername;
   final String? vorname;
   final String? nachname;
@@ -14,7 +14,11 @@ class UserDto {
   final String? stadt;
   final String? profilePictureUrl;
   final String? backgroundImageUrl;
-  final Timestamp? timestamp;      // aus Firestore
+  final Timestamp? timestamp;
+
+  // Für Online-Status / Chat-Anzeige
+  final bool? isOnline;
+  final Timestamp? lastActiveAt;
 
   UserDto({
     this.userid,
@@ -31,9 +35,10 @@ class UserDto {
     this.profilePictureUrl,
     this.backgroundImageUrl,
     this.timestamp,
+    this.isOnline,
+    this.lastActiveAt,
   });
 
-  /// aus Map + optionaler ID (z.B. snap.id)
   factory UserDto.fromMap(Map<String, dynamic> map, {String? id}) {
     return UserDto(
       userid: id ?? map['uid'] as String?,
@@ -50,17 +55,18 @@ class UserDto {
       profilePictureUrl: map['profilePictureUrl'] as String?,
       backgroundImageUrl: map['backgroundImageUrl'] as String?,
       timestamp: map['timestamp'] as Timestamp?,
+      isOnline: map['isOnline'] as bool?,
+      lastActiveAt: map['lastActiveAt'] as Timestamp?,
     );
   }
 
-  /// direkt aus einem typisierten Firestore-Snapshot
   factory UserDto.fromSnapshot(
-      DocumentSnapshot<Map<String, dynamic>> snap) {
+      DocumentSnapshot<Map<String, dynamic>> snap,
+      ) {
     final data = snap.data() ?? <String, dynamic>{};
     return UserDto.fromMap(data, id: snap.id);
   }
 
-  /// optional: zurück in eine Map (z.B. für Updates)
   Map<String, dynamic> toMap() {
     return {
       'uid': userid,
@@ -77,6 +83,8 @@ class UserDto {
       'profilePictureUrl': profilePictureUrl,
       'backgroundImageUrl': backgroundImageUrl,
       'timestamp': timestamp,
+      'isOnline': isOnline,
+      'lastActiveAt': lastActiveAt,
     };
   }
 }

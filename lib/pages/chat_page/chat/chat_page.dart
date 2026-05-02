@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../models/UserDto.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../repositories/chat_repository.dart';
+import '../../../repositories/user_repository.dart';
 import '../../../services/chat_state_service.dart';
 import '../../../services/local_notification_service.dart';
 import '../../user_info_page/UserInfoPage.dart';
@@ -31,6 +32,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final _chatRepo = ChatRepository();
+  final _userRepo = UserRepository();
   final _textCtrl = TextEditingController();
   final _authRepo = AuthRepository();
 
@@ -250,25 +252,23 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         backgroundColor: Colors.black,
         elevation: 0,
         titleSpacing: 0,
-        title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(widget.other.userid!)
-              .snapshots(),
-          builder: (context, rawSnap) {
-            final data = rawSnap.data?.data() ?? {};
-            final isOnline = (data["isOnline"] ?? false) as bool;
-            final lastActiveAt = data["lastActiveAt"] as Timestamp?;
+        title: StreamBuilder<UserDto?>(
+          stream: _userRepo.userStream(widget.other.userid!),
+          builder: (context, snap) {
+            final other = snap.data ?? widget.other;
 
-            final otherName = widget.other.benutzername ?? "Chat";
-            final otherPic = widget.other.profilePictureUrl ?? "";
+            final isOnline = other.isOnline ?? false;
+            final lastActiveAt = other.lastActiveAt;
+
+            final otherName = other.benutzername ?? "Chat";
+            final otherPic = other.profilePictureUrl ?? "";
 
             return Material(
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  final uid = widget.other.userid;
+                  final uid = other.userid;
                   if (uid == null) return;
 
                   Navigator.push(
@@ -292,11 +292,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         backgroundImage:
                         otherPic.isNotEmpty ? NetworkImage(otherPic) : null,
                         child: otherPic.isEmpty
-                            ? const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 18,
-                        )
+                            ? const Icon(Icons.person, color: Colors.white, size: 18)
                             : null,
                       ),
                       const SizedBox(width: 10),
