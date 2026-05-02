@@ -67,7 +67,7 @@ class _PostCommentsSectionState extends State<PostCommentsSection> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(0, 5, 0, 18),
+      margin: const EdgeInsets.fromLTRB(0, 0, 0, 10),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         color: const Color(0xFF121212),
