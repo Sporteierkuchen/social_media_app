@@ -153,7 +153,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                                 builder: (context, snap) {
                                   final c = snap.data ?? 0;
                                   return _MiniInfoText(
-                                    text: "$c Videos",
+                                    text: c == 1 ? "1 Video" : "$c Videos",
                                   );
                                 },
                               ),
@@ -162,7 +162,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                                 builder: (context, snap) {
                                   final c = snap.data ?? 0;
                                   return _MiniInfoText(
-                                    text: "$c Bilder",
+                                    text: c == 1 ? "1 Bild" : "$c Bilder",
                                   );
                                 },
                               ),
@@ -171,7 +171,7 @@ class _PostBesitzerWidgetState extends State<PostBesitzerWidget> {
                                 builder: (context, snap) {
                                   final c = snap.data ?? 0;
                                   return _MiniInfoText(
-                                    text: "$c Abos",
+                                    text: c == 1 ? "1 Abo" : "$c Abos",
                                   );
                                 },
                               ),
